@@ -8,11 +8,11 @@ AI 智能面试官与人才评估系统（校园招聘模拟 + 岗位能力评�
 
 ## 2. 角色与目录所有权（重要，防止互相覆盖代码）
 
-| 成员 | 拥有目录/文件 | 不要修改 |
+| 成员（GitHub账号） | 拥有目录/文件 | 不要修改 |
 |---|---|---|
-| 成员A（AI核心与RAG） | `backend/app/services/`、`backend/app/rag/`、`backend/app/utils/` | 其他目录 |
-| 成员B（业务后端与数据库） | `backend/app/models/`、`backend/app/schemas/`、`backend/app/api/`、`backend/app/database.py`、`backend/scripts/` | `services/`、`rag/`、`utils/` 的内部实现 |
-| 成员C（前端） | `frontend/` 全部 | 后端任何文件 |
+| 成员A · **DavidChristof**（组长） | `backend/app/services/`、`backend/app/rag/`、`backend/app/utils/` | 其他目录 |
+| 成员B · **Aouray** | `backend/app/models/`、`backend/app/schemas/`、`backend/app/api/`、`backend/app/database.py`、`backend/scripts/` | `services/`、`rag/`、`utils/` 的内部实现 |
+| 成员C · **KazzverF** | `frontend/` 全部 | 后端任何文件 |
 
 > 以上为**所有权约定**，但接口契约需要双方配合时，可通过 PR 评审协商修改。修改跨域文件前必须在代码评审中说明理由。
 
@@ -58,8 +58,13 @@ uvicorn backend.app.main:app --reload --port 8000
 
 ## 7. Git 约定
 
-- 功能分支开发，如 `feature/interview-api`，完成后再合并 `main`
-- 提交前 `git pull --rebase`，解决冲突优先保留双方最新代码
+**仓库**：https://github.com/DavidChristof/SITAS_InternshipProgram
+（成员：DavidChristof=组长/AI核心，Aouray=业务后端，KazzverF=前端）
+
+- 主分支为 `main`，每人一个**固定功能分支**：成员A `feature/A-ai-core`、成员B `feature/B-backend`、成员C `feature/C-frontend`
+- 开发流程：`git checkout main && git pull --rebase origin main` → 切到自己的分支开发 → 只 `git add` 自己负责的目录 → `git commit -m "[模块] 说明"` → `git push -u origin 自己的分支`
+- 功能完成：回 `main` 拉最新 → `git merge 自己的分支` → `git push origin main`（或发 Pull Request review 后合入）
+- 提交前 `git pull --rebase`，解决冲突优先保留双方最新代码（`git add` 冲突文件 → `git rebase --continue`）
 - `.env`、`data/*.db`、`data/uploads/` 不入库
 
 ## 8. 给 Claude Code 的建议使用姿势

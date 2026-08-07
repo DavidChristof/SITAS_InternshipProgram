@@ -21,7 +21,7 @@
 | RAG 检索 | BM25（`jieba` 分词 + `rank-bm25`，离线可用，无需向量库） |
 | 前端 | Vue 3（CDN）+ Bootstrap 5，由 FastAPI 托管静态页，无 Node 构建 |
 | 语音 | 预留（`faster-whisper` 本地转写，可选） |
-| 版本控制 | Git（建议建 GitHub/Gitee 私有仓库） |
+| 版本控制 | Git（仓库：https://github.com/DavidChristof/SITAS_InternshipProgram） |
 
 ## 二、目录结构
 
@@ -92,6 +92,8 @@ pytest backend/tests/ -v
 
 ## 五、Git 协作约定
 
-- 每位成员在自己负责的目录/文件下开发，使用功能分支，合并前先拉最新 `main`。
-- 提交信息建议：`[模块] 做了什么`，如 `[候选人API] 新增简历上传接口`。
+**仓库**：https://github.com/DavidChristof/SITAS_InternshipProgram（成员：DavidChristof 组长/AI核心、Aouray 业务后端、KazzverF 前端）
+
+- 主分支 `main`；每人固定功能分支：`feature/A-ai-core`（A）、`feature/B-backend`（B）、`feature/C-frontend`（C）
+- 开发：`git pull --rebase origin main` 同步 → 在自己分支改 → 只 `git add` 自己目录 → `[模块] 说明` 格式提交 → push 自己分支 → 完成后合并回 `main`
 - `.env` 一律不入库；数据库文件、上传文件不入库。

@@ -90,3 +90,47 @@
 2. 每个页面先让 AI 给你"页面结构 + 调用的接口 + 字段示例"确认再写。
 3. 用浏览器 F12 联调；接口没实现时先 mock，用注释标 `// TODO 联调`。
 4. 不要碰 `backend/` 任何文件；需要新接口找成员B 加。
+
+## 9. Git 仓库使用方法（必读）
+
+**仓库**：https://github.com/DavidChristof/SITAS_InternshipProgram
+**成员**：DavidChristof（组长，AI核心/RAG）· Aouray（业务后端）· **KazzverF（你，前端）**
+
+### 首次加入（一次性）
+```bash
+git clone https://github.com/DavidChristof/SITAS_InternshipProgram.git
+cd SITAS_InternshipProgram
+git config user.name "你的GitHub用户名"
+git config user.email "你的GitHub邮箱"      # 必须用与 GitHub 账号绑定的邮箱
+```
+
+### 每天开发流程（你是成员C）
+```bash
+# 开工：先把主分支拉最新
+git checkout main
+git pull --rebase origin main
+# 切换/创建自己的功能分支（每人固定一个分支名）
+git checkout -b feature/C-frontend
+# ...修改代码...
+
+# 提交：只 add 你负责的目录，不要 git add .
+git add frontend
+git commit -m "[前端] 本次改了什么"
+git push -u origin feature/C-frontend
+```
+
+### 功能完成后合入主分支
+```bash
+git checkout main
+git pull --rebase origin main
+git merge feature/C-frontend      # 或先在 GitHub 发 Pull Request，review 后再合
+git push origin main
+```
+
+### 规则
+1. 提交信息格式：`[模块] 做了什么`，例如 `[前端] 完成面试对话页面`
+2. 只提交自己负责的文件（上方的 `git add` 路径）；不动 `backend/` 任何文件
+3. `.env`、`data/*.db`、`data/uploads/` 已被 .gitignore 忽略，永不提交
+4. 冲突处理：`git pull --rebase` 报冲突时，打开冲突文件保留双方代码 → `git add 冲突文件` → `git rebase --continue`
+5. 页面调用的接口以 `backend/app/api/*.py` 顶部契约为准；接口字段对不上先找 Aouray 确认
+6. 有无法解决的问题在群里同步给组长 DavidChristof

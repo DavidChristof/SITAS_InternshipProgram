@@ -114,3 +114,47 @@ pending → running → finished
 2. 每个接口实现前，先列出"路径、方法、请求体、响应示例"让你确认。
 3. 不要直接改 `services/`、`rag/`、`utils/` 内部实现；有需求先找成员A 约定签名。
 4. 用 `uvicorn backend.app.main:app --reload` + `/docs` 自测，再 `pytest`。
+
+## 10. Git 仓库使用方法（必读）
+
+**仓库**：https://github.com/DavidChristof/SITAS_InternshipProgram
+**成员**：DavidChristof（组长，AI核心/RAG）· **Aouray（你，业务后端/数据库）** · KazzverF（前端）
+
+### 首次加入（一次性）
+```bash
+git clone https://github.com/DavidChristof/SITAS_InternshipProgram.git
+cd SITAS_InternshipProgram
+git config user.name "你的GitHub用户名"
+git config user.email "你的GitHub邮箱"      # 必须用与 GitHub 账号绑定的邮箱
+```
+
+### 每天开发流程（你是成员B）
+```bash
+# 开工：先把主分支拉最新
+git checkout main
+git pull --rebase origin main
+# 切换/创建自己的功能分支（每人固定一个分支名）
+git checkout -b feature/B-backend
+# ...修改代码...
+
+# 提交：只 add 你负责的目录，不要 git add .
+git add backend/app/models backend/app/schemas backend/app/api backend/app/database.py backend/scripts backend/tests
+git commit -m "[业务后端] 本次改了什么"
+git push -u origin feature/B-backend
+```
+
+### 功能完成后合入主分支
+```bash
+git checkout main
+git pull --rebase origin main
+git merge feature/B-backend      # 或先在 GitHub 发 Pull Request，review 后再合
+git push origin main
+```
+
+### 规则
+1. 提交信息格式：`[模块] 做了什么`，例如 `[业务后端] 新增候选人面试记录接口`
+2. 只提交自己负责的文件（上方的 `git add` 路径）；不动 `services/`、`rag/`、`utils/`、`frontend/`
+3. `.env`、`data/*.db`、`data/uploads/` 已被 .gitignore 忽略，永不提交
+4. 冲突处理：`git pull --rebase` 报冲突时，打开冲突文件保留双方代码 → `git add 冲突文件` → `git rebase --continue`
+5. 前端需要的接口先写在 `backend/app/api/*.py` 顶部注释契约里，改接口必须通知 KazzverF
+6. 有无法解决的问题在群里同步给组长 DavidChristof

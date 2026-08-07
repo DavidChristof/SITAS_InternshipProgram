@@ -90,3 +90,47 @@
 2. 每个函数实现前，先列出"函数签名 + 入参示例 + 返回示例"让你确认。
 3. 改完跑 `python -m compileall backend` 检查语法，再跑 `pytest backend/tests/`。
 4. 不要动 `models/`、`api/`、`frontend/` 下的任何文件。
+
+## 9. Git 仓库使用方法（必读）
+
+**仓库**：https://github.com/DavidChristof/SITAS_InternshipProgram
+**成员**：DavidChristof（组长，AI核心/RAG）· Aouray（业务后端）· KazzverF（前端）
+
+### 首次加入（一次性）
+```bash
+git clone https://github.com/DavidChristof/SITAS_InternshipProgram.git
+cd SITAS_InternshipProgram
+git config user.name "你的GitHub用户名"
+git config user.email "你的GitHub邮箱"      # 必须用与 GitHub 账号绑定的邮箱
+```
+
+### 每天开发流程（你是成员A）
+```bash
+# 开工：先把主分支拉最新
+git checkout main
+git pull --rebase origin main
+# 切换/创建自己的功能分支（每人固定一个分支名）
+git checkout -b feature/A-ai-core
+# ...修改代码...
+
+# 提交：只 add 你负责的目录，不要 git add .
+git add backend/app/services backend/app/rag backend/app/utils data/knowledge
+git commit -m "[AI核心] 本次改了什么"
+git push -u origin feature/A-ai-core
+```
+
+### 功能完成后合入主分支
+```bash
+git checkout main
+git pull --rebase origin main
+git merge feature/A-ai-core      # 或先在 GitHub 发 Pull Request，review 后再合
+git push origin main
+```
+
+### 规则
+1. 提交信息格式：`[模块] 做了什么`，例如 `[AI核心] 完善简历解析降级逻辑`
+2. 只提交自己负责的文件（上方的 `git add` 路径）；不动 `models/`、`api/`、`frontend/`
+3. `.env`、`data/*.db`、`data/uploads/` 已被 .gitignore 忽略，永不提交
+4. 冲突处理：`git pull --rebase` 报冲突时，打开冲突文件保留双方代码 → `git add 冲突文件` → `git rebase --continue`
+5. 需要改动成员B/成员C 的接口时，先发消息沟通，不要直接改他们的文件
+6. 组长 DavidChristof 负责合并代码和解决冲突，遇到无法解决的问题在群里同步
