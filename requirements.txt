@@ -1,5 +1,7 @@
 # ============ SITAS 依赖清单 ============
 # 安装：pip install -r requirements.txt
+# 若默认 PyPI 慢/失败（国内网络），可加国内镜像：
+#   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # ---- Web 框架 ----
 fastapi>=0.110,<0.116

@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401  确保所有 ORM 模型被注册
 from .api import admin, candidate, interview, knowledge
-from .config import settings
+from .config import FRONTEND_DIR, settings
 from .database import Base, engine
 
 # ===== 应用工厂 =====
@@ -24,11 +24,11 @@ def create_app() -> FastAPI:
     app.include_router(knowledge.router)
 
     # 静态资源与前端入口
-    app.mount("/static", StaticFiles(directory=settings.frontend_dir / "static"), name="static")
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 
     @app.get("/", include_in_schema=False)
     def index():
-        return FileResponse(settings.frontend_dir / "index.html")
+        return FileResponse(FRONTEND_DIR / "index.html")
 
     @app.get("/health")
     def health():

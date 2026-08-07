@@ -65,7 +65,10 @@ SITAS/
 cd D:/26实习/SITAS
 python -m venv .venv
 .venv\Scripts\activate            # PowerShell 下激活
-pip install -r requirements.txt
+pip install -r requirements.txt   # 国内网络慢可加镜像：-i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 1.1 VSCode 中选择解释器：Ctrl+Shift+P → "Python: Select Interpreter" → 选 .venv 下的 Python
+#     （否则 VSCode 会用系统 Python，导致 import 报错）
 
 # 2. 配置密钥
 copy .env.example .env           # 然后编辑 .env，填入 DEEPSEEK_API_KEY
