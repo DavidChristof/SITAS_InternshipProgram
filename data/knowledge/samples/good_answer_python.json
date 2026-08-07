@@ -1,0 +1,8 @@
+{
+  "title": "优秀回答样例：FastAPI vs Flask",
+  "content": "优秀回答示范：'FastAPI 和 Flask 都是 Python 的 Web 框架，但定位不同。Flask 是同步 WSGI 框架，轻量灵活，需要自己集成文档、校验等扩展。FastAPI 基于 ASGI，原生支持异步并发，性能更接近 Go/Node；它基于 Pydantic 做请求参数校验，能自动生成 Swagger/OpenAPI 文档，开发调试效率高。在我们的项目里我选 FastAPI，因为它自带文档、类型安全，而且能直接接入我们调用大模型的异步场景。' 评分要点：说清异步支持（30%）、自动文档（20%）、Pydantic 校验（20%）、结合自己项目场景（30%）。",
+  "meta": {
+    "category": "sample",
+    "for_category": "technical"
+  }
+}

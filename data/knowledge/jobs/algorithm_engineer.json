@@ -1,0 +1,8 @@
+{
+  "title": "算法工程师岗位JD",
+  "content": "岗位职责：负责自然语言处理与大模型相关算法研究与落地，包括数据清洗、Prompt 工程、检索增强生成（RAG）、模型微调与效果评估。任职要求：熟悉 Python 与常用机器学习库；了解 Transformer、LLM 基本原理；有 NLP 项目经验；了解向量数据库或信息检索；具备良好的论文阅读与工程落地能力。",
+  "meta": {
+    "category": "job",
+    "skills": ["Python", "NLP", "LLM", "RAG", "PyTorch"]
+  }
+}

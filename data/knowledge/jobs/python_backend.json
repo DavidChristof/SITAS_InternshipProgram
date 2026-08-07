@@ -1,0 +1,8 @@
+{
+  "title": "Python 后端开发工程师岗位JD",
+  "content": "岗位职责：负责公司 AI 产品后端服务的设计与开发，包括 REST API 开发、数据库设计、第三方服务对接、AI 功能（大模型调用）接入与性能优化。任职要求：计算机相关专业本科及以上；熟练掌握 Python，了解 FastAPI 或 Django；掌握 SQL 与数据库基本设计；了解缓存（Redis）与消息队列；对 LLM 应用开发感兴趣；有实际项目经验者优先。加分项：了解前端基础、有 AI Agent / RAG 相关实践、了解 Docker 部署。",
+  "meta": {
+    "category": "job",
+    "skills": ["Python", "FastAPI", "SQL", "Redis", "LLM"]
+  }
+}

@@ -1,0 +1,26 @@
+# ============ SITAS 依赖清单 ============
+# 安装：pip install -r requirements.txt
+
+# ---- Web 框架 ----
+fastapi>=0.110,<0.116
+uvicorn[standard]>=0.29,<0.34
+python-multipart>=0.0.9        # 文件上传（简历/语音）
+
+# ---- 数据层 ----
+SQLAlchemy>=2.0,<2.1
+pydantic>=2.7,<3
+pydantic-settings>=2.2,<3
+
+# ---- 大模型（DeepSeek，OpenAI 兼容）----
+openai>=1.30,<2
+httpx>=0.27,<0.29
+
+# ---- RAG 中文检索（BM25，离线可用）----
+jieba>=0.42
+rank-bm25>=0.2.2
+
+# ---- 测试 ----
+pytest>=8,<9
+
+# ---- 可选：本地语音转写（Windows CPU 可运行；不装则 voice.py 走占位实现）----
+# faster-whisper>=1.0

@@ -1,0 +1,8 @@
+{
+  "title": "大模型应用相关面试题",
+  "content": "1. 什么是 Prompt 工程？为什么重要？\n2. 什么是 RAG？解决了大模型的什么问题？\n3. 什么是 Agent？ReAct 模式是什么？\n4. 如何降低大模型幻觉？\n5. 如何评估一个 RAG 系统的效果？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "Prompt,RAG,检索增强,幻觉,Agent,ReAct,评估指标"
+  }
+}
