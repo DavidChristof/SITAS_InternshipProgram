@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # ===== 上传目录（简历 / 语音）=====
     upload_dir: str = str(DATA_DIR / "uploads")
 
+    # ===== 语音转写（faster-whisper，可选）=====
+    # 未安装 faster-whisper 时 transcribe 返回空串，不影响文字面试流程
+    whisper_model: str = "base"  # tiny / base / small / medium / large-v3
+    whisper_compute_type: str = "int8"  # CPU 推荐 int8，显存充足可换 float16
+
 
 settings = Settings()
 
