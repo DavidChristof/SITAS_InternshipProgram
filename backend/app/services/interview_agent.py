@@ -27,10 +27,40 @@ logger = logging.getLogger(__name__)
 # 面试环节顺序与默认轮数
 DEFAULT_ROUNDS: list[str] = ["self_intro", "project", "technical", "behavioral", "reverse"]
 
+# 非技术环节的固定证据检索词（technical 按岗位+技能动态拼）
+_CATEGORY_QUERY: dict[str, str] = {
+    "self_intro": "自我介绍 常见面试题 自我认知",
+    "project": "项目经历 深挖 面试问题",
+    "behavioral": "行为面试 沟通 协作 冲突 问题",
+    "reverse": "企业资料 公司文化 发展 团队",
+}
+
 
 def _retrieve_evidence(query: str, top_k: int = 3) -> list[dict]:
     """从知识库检索依据（岗位JD/题库/评分标准/企业资料）。"""
     return knowledge_base.search(query, top_k=top_k)
+
+
+def _category_evidence(cat: str, job_profile: dict[str, Any]) -> list[dict]:
+    """按环节检索对应的知识库依据（evidence 链）。"""
+    if cat == "technical":
+        query = f"{job_profile.get('title', '')} {' '.join(job_profile.get('core_skills', []))} 面试题"
+    else:
+        query = _CATEGORY_QUERY.get(cat, "面试题")
+    return _retrieve_evidence(query, top_k=3)
+
+
+def _trim_evidence(docs: list[dict], limit: int = 3) -> list[dict]:
+    """裁剪证据：最多 limit 条、每条 content 截断，避免入库 payload 过大。
+
+    注意 limit 应与 _category_evidence 的 top_k 一致，保证"证据展示"覆盖"出题依据"。
+    """
+    out = []
+    for d in docs[:limit]:
+        copy = dict(d)
+        copy["content"] = (copy.get("content") or "")[:200]
+        out.append(copy)
+    return out
 
 
 def _as_list(value: Any) -> list[str]:
@@ -56,20 +86,18 @@ def plan_interview(
     """
     categories = categories or DEFAULT_ROUNDS
     rounds: list[dict[str, Any]] = []
-    job_title = job_profile.get("title", "该岗位")
-
-    # 先查知识库题库，看有没有匹配岗位的题目
-    bank_questions = _retrieve_evidence(f"{job_title} {job_profile.get('core_skills', [])} 面试题", top_k=5)
 
     for idx, cat in enumerate(categories, start=1):
-        question_text, expected = _gen_question(cat, job_profile, resume_profile, bank_questions)
+        # 按环节检索对应知识库依据（evidence 链），出题与展示共用
+        evidence = _category_evidence(cat, job_profile)
+        question_text, expected = _gen_question(cat, job_profile, resume_profile, evidence)
         rounds.append(
             {
                 "round_no": idx,
                 "category": cat,
                 "question": question_text,
                 "expected_points": expected,
-                "evidence": bank_questions[:2],  # 检索依据，供前端/报告展示
+                "evidence": _trim_evidence(evidence),  # 检索依据，供前端/报告展示
             }
         )
     return rounds
@@ -95,9 +123,12 @@ def _gen_question(
         or "候选人的项目经历"
     )
 
-    # 反问环节：优先从知识库取企业资料
-    company_hits = knowledge_base.search("企业资料 公司文化 发展 团队", top_k=1)
-    company_brief = company_hits[0].get("content", "")[:300] if company_hits else "（暂无企业资料，可围绕岗位提问）"
+    # 反问环节：优先从传入的企业资料证据里取公司简介（bank_questions 对 reverse 环节即企业资料）
+    company_brief = "（暂无企业资料，可围绕岗位提问）"
+    for q in bank_questions:
+        if q.get("source") == "企业资料" and q.get("content"):
+            company_brief = q["content"][:300]
+            break
 
     prompt_map = {
         "self_intro": (

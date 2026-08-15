@@ -86,6 +86,95 @@ class TestEvaluateAnswer:
         result = interview_agent.evaluate_answer(question="q", answer="  ")
         assert result["score"] == 0
 
+
+class TestEvidenceChain:
+    """plan_interview 按环节检索知识库依据（evidence 链）。"""
+
+    QUESTION_TECH = {
+        "id": "questions/py_fastapi_flask",
+        "title": "FastAPI 面试题",
+        "content": "请简述 FastAPI 与 Flask 的区别。",
+        "source": "面试题库",
+        "meta": {"category": "technical", "expected_points": "异步,自动文档,类型校验"},
+    }
+    COMPANY_DOC = {
+        "id": "companies/example",
+        "title": "示例企业",
+        "content": "公司是一家专注 AI 的科技公司，注重工程师文化、技术成长与团队协作。",
+        "source": "企业资料",
+        "meta": {},
+    }
+    GENERIC = {
+        "id": "jobs/python",
+        "title": "岗位JD",
+        "content": "负责后端系统开发，有项目经验者优先。",
+        "source": "岗位JD",
+        "meta": {},
+    }
+
+    def _fake_search(self, query, top_k=3):
+        if "企业资料" in query:
+            return [self.COMPANY_DOC]
+        if "面试题" in query:
+            return [self.QUESTION_TECH]
+        return [self.GENERIC]
+
+    def test_every_round_has_trimmed_evidence(self, monkeypatch):
+        _fake_llm(monkeypatch)
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", self._fake_search)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, SAMPLE_RESUME)
+        assert len(rounds) == 5
+        for r in rounds:
+            assert r["evidence"], f"{r['category']} 轮缺少证据"
+            assert 0 < len(r["evidence"]) <= 3
+            for e in r["evidence"]:
+                assert len(e["content"]) <= 200
+
+    def test_reverse_evidence_is_company(self, monkeypatch):
+        _fake_llm(monkeypatch)
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", self._fake_search)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, SAMPLE_RESUME)
+        reverse = rounds[-1]
+        assert reverse["category"] == "reverse"
+        assert reverse["evidence"][0]["source"] == "企业资料"
+
+    def test_technical_reuses_bank_question(self, monkeypatch):
+        _fake_llm(monkeypatch)
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", self._fake_search)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, SAMPLE_RESUME)
+        tech = next(r for r in rounds if r["category"] == "technical")
+        assert tech["question"] == "请简述 FastAPI 与 Flask 的区别。"
+
+    def test_reuse_respects_category(self, monkeypatch):
+        # 检索到的题是 behavioral，technical 环节不应复用，应走 LLM 生成
+        behavioral_doc = {
+            "id": "questions/behavioral",
+            "title": "行为面试题",
+            "content": "请分享一个你与团队产生分歧并解决的经历。",
+            "source": "面试题库",
+            "meta": {"category": "behavioral"},
+        }
+
+        def search_only_behavioral(query, top_k=3):
+            return [behavioral_doc]
+
+        _fake_llm(monkeypatch)
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", search_only_behavioral)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, SAMPLE_RESUME)
+        tech = next(r for r in rounds if r["category"] == "technical")
+        assert tech["question"] == "请简单介绍一下你在项目中的角色与贡献。"
+
+    def test_evidence_trimmed_when_long(self, monkeypatch):
+        long_doc = dict(self.COMPANY_DOC, content="很长的内容" * 200)
+        monkeypatch.setattr(
+            interview_agent.knowledge_base, "search", lambda query, top_k=3: [long_doc]
+        )
+        _fake_llm(monkeypatch)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, SAMPLE_RESUME)
+        for r in rounds:
+            for e in r["evidence"]:
+                assert len(e["content"]) <= 200
+
     def test_degrade_path_when_llm_fails(self, monkeypatch):
         def boom(messages, **kw):
             raise RuntimeError("mock 失败")
