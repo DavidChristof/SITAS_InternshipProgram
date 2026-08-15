@@ -1,8 +1,0 @@
-{
-  "title": "Python 后端高频面试题",
-  "content": "1. GIL 是什么？对 Python 多线程有什么影响？\n2. FastAPI 与 Flask 的区别？\n3. Python 中列表与元组的区别？\n4. 如何理解装饰器？给出一个应用场景。\n5. 数据库索引为什么要用 B+ 树？\n6. 接口请求超时可能的原因有哪些，如何排查？",
-  "meta": {
-    "category": "technical",
-    "expected_points": "GIL,异步,自动文档,类型校验,装饰器,索引,超时排查"
-  }
-}

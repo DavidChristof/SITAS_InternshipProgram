@@ -1,0 +1,9 @@
+{
+  "title": "大模型：Prompt 工程",
+  "content": "什么是 Prompt 工程？为什么它很重要？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "Prompt,设计,可控性,输出质量",
+    "difficulty": 2
+  }
+}

@@ -76,6 +76,19 @@ def _gen_question(
     job_req = "；".join(job_profile.get("interview_focus", []) or ["综合考察"])
     candidate = resume_profile.get("summary") or resume_profile.get("name") or "候选人"
 
+    # 项目深挖：优先取简历第一个项目作为背景
+    projects = resume_profile.get("projects") or []
+    first_project = projects[0] if projects else {}
+    project_brief = (
+        first_project.get("description")
+        or f"候选人的项目经历（{first_project.get('name', '')}）"
+        or "候选人的项目经历"
+    )
+
+    # 反问环节：优先从知识库取企业资料
+    company_hits = knowledge_base.search("企业资料 公司文化 发展 团队", top_k=1)
+    company_brief = company_hits[0].get("content", "")[:300] if company_hits else "（暂无企业资料，可围绕岗位提问）"
+
     prompt_map = {
         "self_intro": (
             self_intro.SELF_INTRO_SYSTEM.format(
@@ -86,8 +99,11 @@ def _gen_question(
         "project": (
             project_deep_dive.PROJECT_SYSTEM.format(
                 job_title=job_title,
-                project_role="成员/负责人",
-                tech_stack=",".join(resume_profile.get("skills", [])[:5]),
+                project_role=first_project.get("role") or "成员",
+                tech_stack=",".join(
+                    first_project.get("tech_stack") or resume_profile.get("skills", [])[:5]
+                ),
+                project_brief=project_brief,
             ),
             "实际贡献、难点解决、量化结果",
         ),
@@ -103,16 +119,18 @@ def _gen_question(
             "STAR 完整、反思深度",
         ),
         "reverse": (
-            reverse_qa.REVERSE_SYSTEM.format(company_brief=candidate),
+            reverse_qa.REVERSE_SYSTEM.format(company_brief=company_brief),
             "问题质量、体现思考",
         ),
     }
     system_prompt, fallback_expected = prompt_map.get(cat, prompt_map["technical"])
 
-    # 若题库里有该环节题目，优先复用
+    # 若知识库有"单条短题"且环节匹配，优先复用（整块多题文档不作为单题复用）
     for q in bank_questions:
-        if q.get("category") == cat:
-            return q.get("question", ""), q.get("expected_points", fallback_expected)
+        meta = q.get("meta") or {}
+        content = (q.get("content") or "").strip()
+        if meta.get("category") == cat and 0 < len(content) < 120 and "\n" not in content:
+            return content, meta.get("expected_points", fallback_expected)
 
     try:
         text = llm.chat([{"role": "system", "content": system_prompt}], temperature=0.8, max_tokens=512)
@@ -159,29 +177,32 @@ def evaluate_answer(
     category: str = "technical",
     expected_points: str = "",
     evidence: list[dict] | None = None,
+    job_title: str = "该岗位",
 ) -> dict[str, Any]:
     """对单题回答评分。
 
+    job_title 为可选参数（成员B 可从岗位信息传入，不传则用"该岗位"）。
     返回 {score: 0-100, feedback, improvement, missing_points[], evidence}
     """
     if not answer or not answer.strip():
         return {"score": 0, "feedback": "未作答", "improvement": "请给出你的回答", "missing_points": [], "evidence": evidence or []}
 
     prompt_map = {
-        "self_intro": (self_intro.SELF_INTRO_EVALUATE, ""),
-        "project": (project_deep_dive.PROJECT_EVALUATE, "项目背景"),
-        "technical": (technical.TECHNICAL_EVALUATE, "参考答案要点"),
-        "behavioral": (behavioral.BEHAVIORAL_EVALUATE, ""),
-        "reverse": (reverse_qa.REVERSE_EVALUATE, ""),
+        "self_intro": self_intro.SELF_INTRO_EVALUATE,
+        "project": project_deep_dive.PROJECT_EVALUATE,
+        "technical": technical.TECHNICAL_EVALUATE,
+        "behavioral": behavioral.BEHAVIORAL_EVALUATE,
+        "reverse": reverse_qa.REVERSE_EVALUATE,
     }
-    template, _ = prompt_map.get(category, prompt_map["technical"])
+    template = prompt_map.get(category, prompt_map["technical"])
 
+    # 模板只引用以下 5 个安全字段（带默认值），保证 .format() 永不抛 KeyError
     context = {
-        "job_title": "该岗位",
+        "job_title": job_title,
         "job_requirements": expected_points or "综合考察",
-        "answer": answer,
         "question": question,
         "expected_points": expected_points or "",
+        "answer": answer,
     }
     try:
         result = llm.chat_json([{"role": "user", "content": template.format(**context)}], temperature=0.2)

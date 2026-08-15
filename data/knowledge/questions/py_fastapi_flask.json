@@ -1,0 +1,9 @@
+{
+  "title": "Python：FastAPI 与 Flask 的区别",
+  "content": "请简述 FastAPI 与 Flask 的区别。",
+  "meta": {
+    "category": "technical",
+    "expected_points": "异步,自动文档,类型校验,性能",
+    "difficulty": 2
+  }
+}

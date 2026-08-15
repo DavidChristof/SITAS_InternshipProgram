@@ -1,0 +1,9 @@
+{
+  "title": "后端：接口超时排查",
+  "content": "一个接口请求超时，可能的原因有哪些？你如何排查？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "超时,排查,日志,慢查询,网络",
+    "difficulty": 3
+  }
+}

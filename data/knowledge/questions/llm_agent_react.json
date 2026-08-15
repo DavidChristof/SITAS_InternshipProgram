@@ -1,0 +1,9 @@
+{
+  "title": "大模型：Agent 与 ReAct",
+  "content": "什么是 Agent？ReAct 模式是什么？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "Agent,ReAct,推理,工具调用",
+    "difficulty": 3
+  }
+}

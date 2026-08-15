@@ -1,0 +1,9 @@
+{
+  "title": "Python：GIL 是什么？",
+  "content": "GIL 是什么？对 Python 多线程有什么影响？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "GIL,线程,锁,多线程受限",
+    "difficulty": 3
+  }
+}

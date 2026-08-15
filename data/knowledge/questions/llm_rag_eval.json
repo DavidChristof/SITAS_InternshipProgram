@@ -1,0 +1,9 @@
+{
+  "title": "大模型：如何评估 RAG 系统",
+  "content": "如何评估一个 RAG 系统的效果？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "RAG,评估,召回率,忠实度",
+    "difficulty": 4
+  }
+}

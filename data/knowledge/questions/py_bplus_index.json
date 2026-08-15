@@ -1,0 +1,9 @@
+{
+  "title": "数据库：为什么索引用 B+ 树",
+  "content": "数据库索引为什么要用 B+ 树而不是其他数据结构？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "索引,B+树,磁盘IO,查询",
+    "difficulty": 4
+  }
+}

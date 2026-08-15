@@ -1,0 +1,9 @@
+{
+  "title": "Python：装饰器",
+  "content": "如何理解 Python 中的装饰器？给出一个实际应用场景。",
+  "meta": {
+    "category": "technical",
+    "expected_points": "装饰器,闭包,日志,权限",
+    "difficulty": 3
+  }
+}

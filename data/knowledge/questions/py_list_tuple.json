@@ -1,0 +1,9 @@
+{
+  "title": "Python：列表与元组的区别",
+  "content": "Python 中列表与元组的区别是什么？各自适用什么场景？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "可变,不可变,性能,用途",
+    "difficulty": 2
+  }
+}

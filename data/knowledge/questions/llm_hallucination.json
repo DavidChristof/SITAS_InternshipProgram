@@ -1,0 +1,9 @@
+{
+  "title": "大模型：如何降低幻觉",
+  "content": "有哪些方法可以降低大模型的幻觉问题？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "幻觉,上下文,RAG,约束",
+    "difficulty": 3
+  }
+}
