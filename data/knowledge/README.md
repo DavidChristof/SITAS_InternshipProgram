@@ -10,6 +10,11 @@
 | `standards/` | 评分标准与规则 | 成员A 制定 |
 | `samples/` | 优秀回答样例 | 成员A/指导教师 |
 
+> ⚠️ **`questions/` 约定：一题一文件**。每个 JSON 文件只放**一道**面试题，`meta.category`
+> 填环节（`self_intro` / `project` / `technical` / `behavioral` / `reverse`），`meta.expected_points`
+> 填评分要点。出题逻辑会按 `category` 匹配并直接把整篇 content 当作一道题复用；
+> 若一个文件打包多道题，整块内容会被当成一道题使用（已踩坑，勿再犯）。
+
 ## 文件格式
 
 支持 `.json` / `.md` / `.txt`。
