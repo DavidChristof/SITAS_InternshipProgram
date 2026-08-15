@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from ..rag import knowledge_base
@@ -30,6 +31,15 @@ DEFAULT_ROUNDS: list[str] = ["self_intro", "project", "technical", "behavioral",
 def _retrieve_evidence(query: str, top_k: int = 3) -> list[dict]:
     """从知识库检索依据（岗位JD/题库/评分标准/企业资料）。"""
     return knowledge_base.search(query, top_k=top_k)
+
+
+def _as_list(value: Any) -> list[str]:
+    """字符串或列表统一转为列表（容忍 LLM 把 tech_stack 返回成字符串）。"""
+    if isinstance(value, list):
+        return [str(v) for v in value]
+    if isinstance(value, str):
+        return [v for v in re.split(r"[,，、/;；+\s]+", value) if v]
+    return []
 
 
 # ============ 出题 ============
@@ -101,8 +111,10 @@ def _gen_question(
                 job_title=job_title,
                 project_role=first_project.get("role") or "成员",
                 tech_stack=",".join(
-                    first_project.get("tech_stack") or resume_profile.get("skills", [])[:5]
-                ),
+                    _as_list(first_project.get("tech_stack"))
+                    or _as_list(resume_profile.get("skills"))[:5]
+                )
+                or "未提供",
                 project_brief=project_brief,
             ),
             "实际贡献、难点解决、量化结果",
