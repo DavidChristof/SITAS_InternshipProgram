@@ -31,8 +31,16 @@ DEFAULT_ROUNDS: list[str] = ["self_intro", "project", "technical", "behavioral",
 _CATEGORY_QUERY: dict[str, str] = {
     "self_intro": "自我介绍 常见面试题 自我认知",
     "project": "项目经历 深挖 面试问题",
-    "behavioral": "行为面试 沟通 协作 冲突 问题",
+    "behavioral": "行为面试 经历 冲突 团队 协作 失败",
     "reverse": "企业资料 公司文化 发展 团队",
+}
+# 环节英文键 -> 中文名（用于补检索，保证题库候选命中）
+_CATEGORY_CN: dict[str, str] = {
+    "self_intro": "自我介绍",
+    "project": "项目深挖",
+    "technical": "专业能力",
+    "behavioral": "行为面试",
+    "reverse": "反问",
 }
 
 
@@ -41,13 +49,33 @@ def _retrieve_evidence(query: str, top_k: int = 3) -> list[dict]:
     return knowledge_base.search(query, top_k=top_k)
 
 
+def _dedupe_docs(docs: list[dict]) -> list[dict]:
+    seen: set[str] = set()
+    out: list[dict] = []
+    for d in docs:
+        if d.get("id") not in seen:
+            seen.add(d.get("id"))
+            out.append(d)
+    return out
+
+
 def _category_evidence(cat: str, job_profile: dict[str, Any]) -> list[dict]:
-    """按环节检索对应的知识库依据（evidence 链）。"""
+    """按环节检索对应的知识库依据（evidence 链）。
+
+    技巧：查询带上环节中文名，并在结果中没有本环节题库候选时再补一次检索，
+    保证"题库复用"与"证据展示"都能命中该环节的题目文档。
+    """
     if cat == "technical":
         query = f"{job_profile.get('title', '')} {' '.join(job_profile.get('core_skills', []))} 面试题"
+    elif cat == "reverse":
+        query = _CATEGORY_QUERY["reverse"]
     else:
-        query = _CATEGORY_QUERY.get(cat, "面试题")
-    return _retrieve_evidence(query, top_k=3)
+        query = f"{_CATEGORY_CN.get(cat, cat)} {_CATEGORY_QUERY.get(cat, '面试题')}"
+    docs = _retrieve_evidence(query, top_k=5)
+    if cat != "reverse" and not any((d.get("meta") or {}).get("category") == cat for d in docs):
+        extra = _retrieve_evidence(f"{_CATEGORY_CN.get(cat, cat)} 面试题", top_k=3)
+        docs = _dedupe_docs(docs + extra)
+    return docs
 
 
 def _trim_evidence(docs: list[dict], limit: int = 3) -> list[dict]:
@@ -101,6 +129,19 @@ def plan_interview(
             }
         )
     return rounds
+
+
+def _should_reuse_bank(cat: str, resume_profile: dict[str, Any]) -> bool:
+    """判断该环节是否优先复用题库题。
+
+    优先级原则：有简历素材的环节走模板深挖（更贴合候选人），
+    无素材时用题库兜底；技术面/行为面为标准化题目，始终优先复用题库。
+    """
+    if cat == "self_intro":
+        return not (resume_profile.get("summary") or resume_profile.get("name"))
+    if cat == "project":
+        return not (resume_profile.get("projects"))
+    return True  # technical / behavioral / reverse 之外的标准化环节
 
 
 def _gen_question(
@@ -168,12 +209,15 @@ def _gen_question(
     }
     system_prompt, fallback_expected = prompt_map.get(cat, prompt_map["technical"])
 
-    # 若知识库有"单条短题"且环节匹配，优先复用（整块多题文档不作为单题复用）
-    for q in bank_questions:
-        meta = q.get("meta") or {}
-        content = (q.get("content") or "").strip()
-        if meta.get("category") == cat and 0 < len(content) < 120 and "\n" not in content:
-            return content, meta.get("expected_points", fallback_expected)
+    # 若知识库有"单条短题"且环节匹配，优先复用（整块多题文档不作为单题复用）。
+    # 注意：反问环节的题属于候选人提问，不应作为面试官提问复用；有简历素材的
+    # 自介/项目环节走模板深挖（见 _should_reuse_bank）。
+    if cat != "reverse" and _should_reuse_bank(cat, resume_profile):
+        for q in bank_questions:
+            meta = q.get("meta") or {}
+            content = (q.get("content") or "").strip()
+            if meta.get("category") == cat and 0 < len(content) < 120 and "\n" not in content:
+                return content, meta.get("expected_points", fallback_expected)
 
     try:
         text = llm.chat([{"role": "system", "content": system_prompt}], temperature=0.8, max_tokens=512)

@@ -23,9 +23,12 @@ class Retriever:
         return len(self._docs)
 
     def add_documents(self, docs: list[dict]) -> None:
-        """docs: [{id, title, content, source, meta}]"""
+        """docs: [{id, title, content, source, meta}]
+
+        title 一并参与分词索引，保证"行为面试""岗位JD"等标题关键词也能被检索命中。
+        """
         self._docs.extend(docs)
-        self._tokenized = [list(jieba.cut(d["content"])) for d in self._docs]
+        self._tokenized = [list(jieba.cut(f"{d.get('title', '')} {d['content']}")) for d in self._docs]
         self._bm25 = BM25Okapi(self._tokenized)
 
     def retrieve(self, query: str, top_k: int = 5) -> list[dict]:

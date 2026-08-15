@@ -236,6 +236,52 @@ class TestFollowup:
         result = interview_agent.generate_followup([], SAMPLE_JOB)
         assert "question" in result
 
+
+class TestReusePriority:
+    """出题优先级：有简历素材的环节走模板深挖，空简历走题库兜底；标准化环节始终复用题库。"""
+
+    BANK_DOCS = [
+        {"id": "q/si", "title": "自我介绍", "content": "请用1分钟做自我介绍。", "source": "面试题库", "meta": {"category": "self_intro"}},
+        {"id": "q/pj", "title": "项目深挖", "content": "请介绍一个最有挑战性的项目。", "source": "面试题库", "meta": {"category": "project"}},
+        {"id": "q/tech", "title": "技术题", "content": "请简述 FastAPI 与 Flask 的区别。", "source": "面试题库", "meta": {"category": "technical"}},
+    ]
+
+    def _fake_search(self, query, top_k=5):
+        return list(self.BANK_DOCS)
+
+    def test_template_wins_when_resume_rich(self, monkeypatch):
+        _fake_llm(monkeypatch)
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", self._fake_search)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, SAMPLE_RESUME)
+        by = {r["category"]: r["question"] for r in rounds}
+        # 自介/项目：简历有素材 → 走模板（LLM mock 输出）
+        assert by["self_intro"] == "请简单介绍一下你在项目中的角色与贡献。"
+        assert by["project"] == "请简单介绍一下你在项目中的角色与贡献。"
+        # 技术：标准化环节 → 题库复用
+        assert by["technical"] == "请简述 FastAPI 与 Flask 的区别。"
+
+    def test_bank_wins_when_resume_empty(self, monkeypatch):
+        _fake_llm(monkeypatch)
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", self._fake_search)
+        rounds = interview_agent.plan_interview(SAMPLE_JOB, {})
+        by = {r["category"]: r["question"] for r in rounds}
+        assert by["self_intro"] == "请用1分钟做自我介绍。"
+        assert by["project"] == "请介绍一个最有挑战性的项目。"
+        assert by["technical"] == "请简述 FastAPI 与 Flask 的区别。"
+
+    def test_category_evidence_falls_back_to_category_search(self, monkeypatch):
+        # 主检索没命中行为面试题时，应补一次按环节名的检索
+        beh_doc = {"id": "q/beh", "title": "行为面试", "content": "请分享一次团队分歧经历。", "source": "面试题库", "meta": {"category": "behavioral"}}
+
+        def search(query, top_k=5):
+            if "行为面试 面试题" in query:
+                return [beh_doc]
+            return [{"id": "j/x", "title": "无关", "content": "无关内容", "source": "岗位JD", "meta": {}}]
+
+        monkeypatch.setattr(interview_agent.knowledge_base, "search", search)
+        docs = interview_agent._category_evidence("behavioral", SAMPLE_JOB)
+        assert any((d.get("meta") or {}).get("category") == "behavioral" for d in docs)
+
     def test_degrade_path_when_llm_fails(self, monkeypatch):
         def boom(messages, **kw):
             raise RuntimeError("mock 失败")

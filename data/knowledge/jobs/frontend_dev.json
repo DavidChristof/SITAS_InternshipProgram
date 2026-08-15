@@ -1,0 +1,8 @@
+{
+  "title": "前端开发工程师岗位JD",
+  "content": "岗位职责：负责 Web 前端页面开发与交互实现，包括候选人端面试页面、后台管理系统页面，用 Vue3 构建组件化应用，负责与后端 REST API 联调与数据对接。任职要求：计算机相关专业；熟练掌握 HTML/CSS/JavaScript；了解 Vue 或 React 等前端框架；有响应式布局与移动端适配经验；了解 Git 与 HTTP 协议；有实际项目经验者优先。加分项：了解 TypeScript、Element UI、Bootstrap、前端性能优化。",
+  "meta": {
+    "category": "job",
+    "skills": ["Vue", "JavaScript", "HTML", "CSS", "TypeScript"]
+  }
+}

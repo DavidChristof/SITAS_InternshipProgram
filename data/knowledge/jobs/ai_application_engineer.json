@@ -1,0 +1,8 @@
+{
+  "title": "AI 应用开发工程师岗位JD",
+  "content": "岗位职责：负责基于大模型的智能应用开发，包括对话系统、RAG 知识库问答、Agent 工作流搭建、Prompt 调优与效果评估，把大模型能力封装成稳定可用的产品接口。任职要求：熟悉 Python；了解 LLM API 调用与 Prompt 工程；有 RAG 或 Agent 相关实践经验；了解 LangChain 或类似编排框架；具备良好的文档阅读与问题定位能力。加分项：了解向量数据库、模型微调、评估方法论、Docker 部署。",
+  "meta": {
+    "category": "job",
+    "skills": ["Python", "LLM", "RAG", "LangChain", "Prompt"]
+  }
+}

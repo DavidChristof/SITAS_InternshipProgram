@@ -1,0 +1,8 @@
+{
+  "title": "数据分析师岗位JD",
+  "content": "岗位职责：负责业务数据的清洗、分析与可视化，产出数据报表与洞察报告，支撑运营与产品决策，参与指标体系设计与口径梳理。任职要求：熟悉 SQL 与 Excel；掌握 Python 数据分析（pandas/NumPy）；有数据可视化经验（如 ECharts、Tableau）；了解统计学基本概念与假设检验；具备良好的业务理解、沟通与表达能力。加分项：了解机器学习基础、BI 工具、A/B 实验设计。",
+  "meta": {
+    "category": "job",
+    "skills": ["SQL", "Python", "pandas", "NumPy", "Excel"]
+  }
+}
