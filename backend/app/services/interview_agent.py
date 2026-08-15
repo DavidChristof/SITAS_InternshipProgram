@@ -185,6 +185,42 @@ def _gen_question(
 
 # ============ 追问 ============
 
+_FOLLOWUP_SYSTEM = """你是{job_title}面试官，正在追问候选人。基于以下面试问答记录，提出 1 个有价值的追问。
+追问要针对回答中：表述不清、可以深挖、前后矛盾、缺少量化证据的地方；若回答过短或太笼统，则引导候选人展开。
+只输出 JSON：
+{{
+  "question": "追问问题（1-2 句）",
+  "reason": "追问原因，指出是基于候选人回答中的什么信息"
+}}"""
+
+_QUANT_RE = re.compile(r"[0-9一二三四五六七八九十]+|[万千百亿倍%]+|提升|降低|减少|增加|耗时|秒|人|次|行")
+
+
+def _rule_followup(interview_context: list[dict[str, Any]]) -> dict[str, Any]:
+    """规则降级追问：根据最后一轮回答质量给保守但合理的追问。"""
+    last = interview_context[-1] if interview_context else {}
+    answer = (last.get("answer_text") or "").strip()
+    if not answer:
+        return {
+            "question": "刚才这个问题你还没回答，可以再展开说说你的想法吗？",
+            "reason": "已降级为规则追问（LLM 暂不可用）：上一轮未作答",
+        }
+    if len(answer) < 30:
+        return {
+            "question": "可以再展开讲讲你在这个部分具体做了哪些工作、遇到了什么难点吗？",
+            "reason": "已降级为规则追问（LLM 暂不可用）：回答过短，引导候选人展开",
+        }
+    if not _QUANT_RE.search(answer):
+        return {
+            "question": "你提到的情况能给出一些具体的数据或结果吗？比如耗时、性能或效果上的变化。",
+            "reason": "已降级为规则追问（LLM 暂不可用）：回答缺少量化结果",
+        }
+    return {
+        "question": "可以再深挖一下，当时为什么选择这个方案？有没有考虑过其他方案？",
+        "reason": "已降级为规则追问（LLM 暂不可用）",
+    }
+
+
 def generate_followup(
     interview_context: list[dict[str, Any]],
     job_profile: dict[str, Any],
@@ -192,24 +228,26 @@ def generate_followup(
     """基于前几轮回答生成追问。
 
     interview_context: [ {round_no, category, question, answer_text} ]
-    返回 {question, reason}
+    返回 {question, reason}；LLM 失败/返回脏数据时按最后一轮回答质量做规则降级。
     """
     job_title = job_profile.get("title", "该岗位")
     history = "\n".join(
         f"第{r['round_no']}轮（{r.get('category', '')}）\n问：{r.get('question', '')}\n答：{r.get('answer_text', '')}"
         for r in interview_context
     )
-    system = (
-        f"你是一位{job_title}面试官。候选人的回答如下：\n{history[:4000]}\n"
-        "请针对回答中不清晰、可深挖或有矛盾的地方提出 1 个追问。"
-        "只输出问题本身，不要解释。"
-    )
+    system = _FOLLOWUP_SYSTEM.format(job_title=job_title) + "\n\n面试记录：\n" + (history[:4000] or "（暂无记录）")
     try:
-        text = llm.chat([{"role": "user", "content": system}], temperature=0.8, max_tokens=300)
-        return {"question": text.strip(), "reason": "针对上一轮回答追问"}
+        data = llm.chat_json([{"role": "user", "content": system}], temperature=0.7, max_tokens=400)
+        if not isinstance(data, dict):
+            raise ValueError(f"LLM 返回非字典: {type(data).__name__}")
+        question = (data.get("question") or "").strip()
+        reason = (data.get("reason") or "").strip()
+        if not question:
+            raise ValueError("LLM 未返回追问问题")
+        return {"question": question, "reason": reason or "针对上一轮回答追问"}
     except Exception as exc:  # noqa: BLE001
         logger.warning("追问降级: %s", exc)
-        return {"question": "可以再展开说说你在这个部分具体做了哪些工作吗？", "reason": "降级追问"}
+        return _rule_followup(interview_context)
 
 
 # ============ 评分 ============

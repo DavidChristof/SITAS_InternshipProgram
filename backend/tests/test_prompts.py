@@ -175,6 +175,67 @@ class TestEvidenceChain:
             for e in r["evidence"]:
                 assert len(e["content"]) <= 200
 
+
+class TestFollowup:
+    """generate_followup 结构化追问 + 规则降级。"""
+
+    CTX = [
+        {
+            "round_no": 1,
+            "category": "technical",
+            "question": "请简述 FastAPI 与 Flask 的区别",
+            "answer_text": "FastAPI 是异步框架，有自动文档，性能更好。",
+        }
+    ]
+
+    def test_returns_structured_followup(self, monkeypatch):
+        def fake_chat_json(messages, **kw):
+            return {"question": "具体性能提升了多少？", "reason": "回答提到性能更好但缺少量化"}
+
+        monkeypatch.setattr(llm, "chat_json", fake_chat_json)
+        result = interview_agent.generate_followup(self.CTX, SAMPLE_JOB)
+        assert result == {"question": "具体性能提升了多少？", "reason": "回答提到性能更好但缺少量化"}
+
+    def test_degrades_when_llm_garbage(self, monkeypatch):
+        monkeypatch.setattr(llm, "chat_json", lambda messages, **kw: ["garbage"])
+        result = interview_agent.generate_followup(self.CTX, SAMPLE_JOB)
+        assert "question" in result and "reason" in result
+
+    def test_degrades_on_empty_answer(self, monkeypatch):
+        def boom(messages, **kw):
+            raise RuntimeError("mock 失败")
+
+        monkeypatch.setattr(llm, "chat_json", boom)
+        ctx = [{"round_no": 1, "answer_text": "  "}]
+        result = interview_agent.generate_followup(ctx, SAMPLE_JOB)
+        assert "展开" in result["question"]
+        assert "降级" in result["reason"]
+
+    def test_degrades_on_short_answer(self, monkeypatch):
+        def boom(messages, **kw):
+            raise RuntimeError("mock 失败")
+
+        monkeypatch.setattr(llm, "chat_json", boom)
+        result = interview_agent.generate_followup([{"round_no": 1, "answer_text": "还行"}], SAMPLE_JOB)
+        assert "展开" in result["question"]
+
+    def test_degrades_on_missing_quantification(self, monkeypatch):
+        def boom(messages, **kw):
+            raise RuntimeError("mock 失败")
+
+        monkeypatch.setattr(llm, "chat_json", boom)
+        long_no_num = "在项目中我们遇到了接口响应变慢的问题，我负责用日志和监控定位瓶颈，并做了缓存与异步改造。"  # 无数字/量化词，且长度>30
+        result = interview_agent.generate_followup([{"round_no": 1, "answer_text": long_no_num}], SAMPLE_JOB)
+        assert "数据" in result["question"]
+
+    def test_empty_context_no_crash(self, monkeypatch):
+        def boom(messages, **kw):
+            raise RuntimeError("mock 失败")
+
+        monkeypatch.setattr(llm, "chat_json", boom)
+        result = interview_agent.generate_followup([], SAMPLE_JOB)
+        assert "question" in result
+
     def test_degrade_path_when_llm_fails(self, monkeypatch):
         def boom(messages, **kw):
             raise RuntimeError("mock 失败")
