@@ -292,3 +292,52 @@ class TestReusePriority:
         )
         assert 0 <= result["score"] <= 100
         assert "降级" in result["feedback"]
+
+
+class TestRuleScore:
+    """规则降级评分：要点命中 + 完整度，保证无 key 时也有区分度。"""
+
+    def test_full_keyword_coverage_scores_high(self):
+        answer = "GIL 是全局解释器锁，限制了多线程并行执行，所以多线程受锁的限制。"
+        score, missing = interview_agent._rule_score(answer, "GIL,线程,锁")
+        assert missing == []
+        assert score >= 80
+
+    def test_partial_keyword_coverage(self):
+        answer = "GIL 是多线程的一个锁。"
+        score, missing = interview_agent._rule_score(answer, "GIL,线程,锁,并行")
+        assert "并行" in missing
+        assert "GIL" not in missing
+        assert 0 <= score <= 100
+
+    def test_no_expected_points_neutral(self):
+        score, missing = interview_agent._rule_score("这是一个较长的回答，内容完整有条理。", "")
+        assert missing == []
+        assert 5 <= score <= 95
+
+    def test_short_answer_scores_low(self):
+        score, _ = interview_agent._rule_score("短答", "GIL,线程,锁")
+        assert score <= 30
+
+    def test_degrade_populates_missing_points(self, monkeypatch):
+        def boom(messages, **kw):
+            raise RuntimeError("mock 失败")
+
+        monkeypatch.setattr(llm, "chat_json", boom)
+        result = interview_agent.evaluate_answer(
+            question="q",
+            answer="RAG 通过检索增强生成。",
+            category="technical",
+            expected_points="RAG,检索,幻觉",
+        )
+        assert result["missing_points"]  # 至少"幻觉"未覆盖
+        assert result["score"] <= 90
+
+    def test_llm_missing_points_string_normalized(self, monkeypatch):
+        # LLM 把 missing_points 返回成字符串时，应归一化为 list
+        monkeypatch.setattr(
+            llm, "chat_json",
+            lambda messages, **kw: {"score": 70, "feedback": "ok", "improvement": "x", "missing_points": "量化"},
+        )
+        result = interview_agent.evaluate_answer(question="q", answer="回答内容比较长比较完整。", category="project")
+        assert result["missing_points"] == ["量化"]

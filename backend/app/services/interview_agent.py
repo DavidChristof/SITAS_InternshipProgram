@@ -334,18 +334,40 @@ def evaluate_answer(
         result.setdefault("score", 60)
         result.setdefault("feedback", "")
         result.setdefault("improvement", "")
-        result.setdefault("missing_points", [])
+        # 归一化 missing_points：LLM 偶尔返回字符串或 None
+        mp = result.get("missing_points") or []
+        result["missing_points"] = mp if isinstance(mp, list) else [mp]
         result["evidence"] = evidence or []
         result["score"] = max(0, min(100, int(result["score"])))
         return result
     except Exception as exc:  # noqa: BLE001
         logger.warning("评分降级: %s", exc)
-        # 规则降级：按回答长度粗评
-        length_score = min(100, max(30, len(answer) // 10))
+        score, missing = _rule_score(answer, expected_points)
         return {
-            "score": length_score,
+            "score": score,
             "feedback": "已降级为规则评分（LLM 暂不可用）",
-            "improvement": "建议回答更完整、更有条理",
-            "missing_points": [],
+            "improvement": "建议回答更完整、更有条理，尽量覆盖评分要点",
+            "missing_points": missing,
             "evidence": evidence or [],
         }
+
+
+def _rule_score(answer: str, expected_points: str) -> tuple[int, list[str]]:
+    """规则降级评分：评分要点命中率（60 分）+ 回答完整度（40 分）。
+
+    用于 LLM 不可用时的保守评分，保证演示/无 key 场景仍有合理区分度。
+    """
+    text = (answer or "").strip()
+    points = [p.strip() for p in re.split(r"[,，、/;；+\s]+", expected_points or "") if p.strip()]
+    missing = [p for p in points if p and p not in text]
+    hit = len(points) - len(missing)
+    points_score = round(60 * hit / len(points)) if points else 30
+
+    if len(text) < 20:
+        complete = 10
+    elif len(text) < 40:
+        complete = 25
+    else:
+        complete = 40
+
+    return max(5, min(95, points_score + complete)), missing
