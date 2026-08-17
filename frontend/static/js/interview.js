@@ -1,71 +1,79 @@
 /**
- * 面试对话组件（成员C实现）。
- * 功能：进度提示 / 文字面试 / 语音录音上传 / 逐题评分反馈 / 报告展示。
+ * 面试模块组件（成员C实现）。
+ *  - InterviewView：AI 面试对话（文字 + 录音），阶段二完善。
+ *  - ReportView：面试结果报告（总分 / 雷达图 / 优缺点 / 建议），阶段三完善。
+ *
+ * 阶段一仅提供占位视图，保证「候选人端 → 面试 → 报告」的视图跳转链路可跑通。
  */
 const InterviewView = {
+  props: {
+    interview: { type: Object, default: null }, // { id, jobId, jobTitle }
+  },
   data() {
     return {
-      interviewId: null,
-      currentQuestion: null,
-      roundNo: 0,
-      messages: [], // [{from:'ai'|'me', text}]
-      answerText: "",
+      messages: [], // 聊天气泡 [{from:'ai'|'me', text}]
       status: "idle", // idle | running | finished
+      loading: false,
+      error: "",
+    };
+  },
+  computed: {
+    jobTitle() {
+      return (this.interview && this.interview.jobTitle) || "本场面试";
+    },
+  },
+  methods: {
+    back() {
+      this.$emit("back");
+    },
+  },
+  // TODO(阶段二): 实现 startInterview / submitAnswer / 录音上传 / 逐题评分反馈 / 进度提示
+  template: `
+  <div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0">💬 AI 面试对话</h4>
+      <button class="btn btn-outline-secondary btn-sm" @click="back()">← 返回候选人端</button>
+    </div>
+    <div class="card">
+      <div class="card-body text-center text-muted py-5">
+        <div class="display-6 mb-2">🚧</div>
+        <h5>{{ jobTitle }}</h5>
+        <p>面试对话功能将在<b>阶段二</b>实现（文字面试 → 逐题评分 → 录音 → 报告）。</p>
+        <p class="small">当前仅确认视图链路：候选人端 → 面试 → 报告 可正常跳转。</p>
+      </div>
+    </div>
+  </div>`,
+};
+
+const ReportView = {
+  props: {
+    interviewId: { type: [Number, String], default: null },
+  },
+  data() {
+    return {
       report: null,
-      recording: false,
-      mediaRecorder: null,
-      audioChunks: [],
+      loading: false,
+      error: "",
     };
   },
   methods: {
-    async startInterview() {
-      // TODO(成员C): 调用 POST /api/interview/{id}/start 获取第一题
-    },
-    async submitAnswer() {
-      // TODO(成员C): 调用 POST /api/interview/{id}/answer 提交，展示评分与下一题
-    },
-    startRecord() {
-      // TODO(成员C): 用 MediaRecorder 录音，结束后上传 /api/interview/... 语音
-      const self = this;
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then((stream) => {
-          const mr = new MediaRecorder(stream);
-          mr.ondataavailable = (e) => self.audioChunks.push(e.data);
-          mr.onstop = () => self.uploadAudio(new Blob(self.audioChunks, { type: "audio/webm" }));
-          self.mediaRecorder = mr;
-          self.recording = true;
-          self.audioChunks = [];
-          mr.start();
-        })
-        .catch((e) => alert("无法获取麦克风：" + e.message));
-    },
-    stopRecord() {
-      this.recording = false;
-      if (this.mediaRecorder) this.mediaRecorder.stop();
-    },
-    uploadAudio(blob) {
-      // TODO(成员C): 上传音频 → 后端转写 → 作为回答提交
-      alert("语音上传转写功能开发中，请先使用文字回答。");
+    back() {
+      this.$emit("back");
     },
   },
+  // TODO(阶段三): 实现 总分/等级/维度雷达图/优缺点/建议/逐题复盘
   template: `
   <div>
-    <h4 class="mb-3">💬 AI 面试对话</h4>
-    <div class="chat-box" ref="chatBox">
-      <div v-for="(m, i) in messages" :key="i" class="d-flex" :class="m.from==='me' ? 'justify-content-end' : 'justify-content-start'">
-        <div class="msg-bubble" :class="m.from==='ai' ? 'msg-ai' : 'msg-me'">{{ m.text }}</div>
-      </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0">📊 面试报告</h4>
+      <button class="btn btn-outline-secondary btn-sm" @click="back()">← 返回候选人端</button>
     </div>
-    <div class="mt-3">
-      <div class="input-group">
-        <textarea v-model="answerText" class="form-control" rows="2" placeholder="输入你的回答…" :disabled="status !== 'running'"></textarea>
-        <button class="btn btn-primary" @click="submitAnswer" :disabled="status !== 'running'">提交回答</button>
-        <button class="btn btn-danger" :class="{recording: recording}" @click="recording ? stopRecord() : startRecord()">
-          {{ recording ? '停止录音' : '🎙 语音回答' }}
-        </button>
+    <div class="card">
+      <div class="card-body text-center text-muted py-5">
+        <div class="display-6 mb-2">🚧</div>
+        <h5>面试 #{{ interviewId }}</h5>
+        <p>结果报告功能将在<b>阶段三</b>实现（总分 / 等级 / 维度雷达图 / 优缺点 / 改进建议）。</p>
       </div>
-      <p class="text-muted small mt-1">第 {{ roundNo }} 轮 · 面试状态：{{ status }}</p>
     </div>
   </div>`,
 };

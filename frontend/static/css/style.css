@@ -57,3 +57,42 @@ body {
   70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
   100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
+
+/* ===== 通用：卡片 / 表格 / 状态 ===== */
+.card {
+  transition: box-shadow 0.15s ease-in-out;
+}
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.nav-pills .nav-link.active {
+  font-weight: 600;
+}
+
+/* 表格单元格超长省略 */
+.cell-truncate {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 空态图标 */
+.display-6 {
+  color: #adb5bd;
+}
+
+/* 弹窗表单标签 */
+.modal-body .form-label {
+  font-weight: 500;
+}
+
+/* 页面视图淡入 */
+main > div {
+  animation: fadeIn 0.25s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
