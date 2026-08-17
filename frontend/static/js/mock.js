@@ -211,6 +211,16 @@ const Mock = {
     };
   },
 
+  /** 语音转写（mock） */
+  transcribeAudio(formData) {
+    // TODO 联调: 成员B/A 的语音转写接口就绪后，此函数不再被调用
+    const round = (formData && formData.get && formData.get("round_no")) || "1";
+    return {
+      text: "（语音转写结果 mock）这是我通过麦克风录入的第 " + round + " 轮回答。在实际联调中，这里会是 faster-whisper 转写出的真实文本。",
+      confidence: 0.9,
+    };
+  },
+
   report(id) {
     const plan = this._ensurePlan(id);
     const dims = [

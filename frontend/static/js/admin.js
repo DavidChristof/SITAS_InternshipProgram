@@ -62,7 +62,8 @@ const AdminView = {
           ],
         },
         candidate: {
-          label: "候选人", endpoint: "/api/admin/candidates", built: false,
+          label: "候选人", endpoint: "/api/admin/candidates", built: true,
+          format: { status: { active: "开放", closed: "关闭" } },
           columns: [
             { key: "name", label: "姓名" }, { key: "email", label: "邮箱" },
             { key: "phone", label: "电话" }, { key: "status", label: "状态" },
@@ -78,7 +79,8 @@ const AdminView = {
           ],
         },
         interviewer: {
-          label: "面试官", endpoint: "/api/admin/interviewers", built: false,
+          label: "面试官", endpoint: "/api/admin/interviewers", built: true,
+          format: { role: { hr: "HR", teacher: "教师", admin: "管理员" } },
           columns: [
             { key: "name", label: "姓名" }, { key: "role", label: "角色" }, { key: "title", label: "职称" },
           ],
@@ -92,7 +94,10 @@ const AdminView = {
           ],
         },
         question: {
-          label: "题库", endpoint: "/api/admin/questions", built: false,
+          label: "题库", endpoint: "/api/admin/questions", built: true,
+          format: {
+            category: { self_intro: "自我介绍", project: "项目经历", technical: "专业技能", behavioral: "综合素质", reverse: "反问环节" },
+          },
           columns: [
             { key: "category", label: "环节" }, { key: "question", label: "题目", truncate: true },
             { key: "job_name", label: "关联岗位" }, { key: "difficulty", label: "难度" },
@@ -154,6 +159,9 @@ const AdminView = {
   created() {
     this.sizes = { enterprise: 10, job: 10, candidate: 10, interviewer: 10, question: 10, interview: 10 };
     this.pages = { enterprise: 1, job: 1, candidate: 1, interviewer: 1, question: 1, interview: 1 };
+    // 支持 ?view=admin&tab=candidate 深链，便于测试与演示
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && this.meta[tab]) this.tab = tab;
     this.loadReference();
     this.loadTab(this.tab);
   },
@@ -241,7 +249,8 @@ const AdminView = {
     cellText(row, col) {
       const v = row[col.key];
       if (v === null || v === undefined) return "—";
-      if (col.key === "total_score" && v === null) return "—";
+      const fmt = this.cur && this.cur.format && this.cur.format[col.key];
+      if (fmt && fmt[v] !== undefined) return fmt[v];
       return v;
     },
     async save() {
@@ -256,6 +265,14 @@ const AdminView = {
       this.error = "";
       const tab = this.tab;
       const body = Object.assign({}, this.form);
+      // 归一化：可选下拉留空 → null（如通用题 job_id）；数字字段 → Number
+      (this.cur.fields || []).forEach((f) => {
+        if (body[f.key] === "") {
+          if (f.type === "select") body[f.key] = null;
+        } else if (f.type === "number" && body[f.key] !== undefined && body[f.key] !== null) {
+          body[f.key] = Number(body[f.key]);
+        }
+      });
       try {
         if (this.formMode === "add") {
           // TODO 联调: API.post(this.cur.endpoint, body)

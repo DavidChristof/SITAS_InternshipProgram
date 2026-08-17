@@ -24,6 +24,19 @@ const app = createApp({
     } catch (e) {
       console.warn("读取候选人缓存失败：", e);
     }
+    // 深链：?view=interview&iid=1&jobTitle=xxx 直接进入面试对话（便于测试/演示）
+    const p = new URLSearchParams(window.location.search);
+    if (this.currentView === "interview" && p.get("iid")) {
+      this.interviewContext = {
+        id: Number(p.get("iid")),
+        jobId: Number(p.get("jobId") || 1),
+        jobTitle: p.get("jobTitle") || "演示岗位",
+      };
+    }
+    // 深链：?view=report&iid=1 直接进入结果报告
+    if (this.currentView === "report" && p.get("iid")) {
+      this.reportId = Number(p.get("iid"));
+    }
   },
   methods: {
     /** 保存当前候选人并写入 localStorage */
