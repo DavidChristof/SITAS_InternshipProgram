@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 
@@ -26,3 +26,33 @@ def ok(data: Any = None, message: str = "success") -> ApiResponse:
 def fail(code: int, message: str, data: Any = None) -> ApiResponse:
     """失败响应。业务错误码约定：1001 参数错误 / 1002 资源未找到 / 1003 服务器内部错误。"""
     return ApiResponse(code=code, message=message, data=data)
+
+
+# ============ 请求模型（成员B 维护，供 POST/PUT 请求体校验）============
+
+
+class EnterpriseCreate(BaseModel):
+    """新建企业请求体。"""
+
+    name: str = Field(min_length=1, max_length=100, description="企业名称")
+    industry: str = ""
+    description: str = ""
+
+
+class JobCreate(BaseModel):
+    """新建岗位请求体。"""
+
+    enterprise_id: int = Field(..., description="所属企业 id")
+    title: str = Field(min_length=1, max_length=100, description="岗位名称")
+    description: str = ""
+    requirements: str = ""
+    skills: str = ""
+
+
+class CandidateUpdate(BaseModel):
+    """更新候选人请求体（全部可选，仅更新传入的非空字段）。"""
+
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    status: str | None = None
