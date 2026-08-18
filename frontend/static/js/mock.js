@@ -294,8 +294,19 @@ const Mock = {
     return map[resource] || [];
   },
 
-  adminList(resource, page, size) {
-    const all = this._adminData(resource);
+  adminList(resource, page, size, filters) {
+    let all;
+    if (resource === "interview") {
+      all = this.interviews(); // 面试记录 = 静态历史 + 本次会话内已开始的面试
+    } else {
+      all = this._adminData(resource);
+    }
+    // 按筛选条件过滤
+    if (filters) {
+      if (filters.status) all = all.filter((i) => i.status === filters.status);
+      if (filters.job_id) all = all.filter((i) => i.job_id === Number(filters.job_id));
+      if (filters.candidate_id) all = all.filter((i) => i.candidate_id === Number(filters.candidate_id));
+    }
     const list = all.slice((page - 1) * size, page * size);
     return { list, total: all.length };
   },

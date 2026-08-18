@@ -12,9 +12,17 @@ const AdminView = {
     return {
       tab: "enterprise",
       error: "",
-      // 供岗位/题目表单选择的企业与岗位列表
+      // 供岗位/题目表单选择的企业、岗位与候选人列表
       enterprises: [],
       allJobs: [],
+      candidates: [],
+      // 面试记录筛选条件
+      filters: { interview: { status: "", job_id: "", candidate_id: "" } },
+      // 面试记录详情弹窗
+      detail: null,
+      detailRow: null,
+      detailLoading: false,
+      detailError: "",
       // 各资源的状态
       lists: {}, // lists[resource] = []
       totals: {}, // totals[resource] = number
@@ -125,13 +133,31 @@ const AdminView = {
           ],
         },
         interview: {
-          label: "面试记录", endpoint: "/api/admin/interviews", built: false,
+          label: "面试记录", endpoint: "/api/admin/interviews", built: true, readonly: true,
+          format: { status: { pending: "待开始", running: "进行中", finished: "已完成" } },
           columns: [
             { key: "id", label: "ID" }, { key: "candidate_name", label: "候选人" },
             { key: "job_title", label: "岗位" }, { key: "status", label: "状态" },
             { key: "total_score", label: "总分" }, { key: "created_at", label: "时间" },
           ],
           fields: [],
+          filters: [
+            {
+              key: "status", label: "状态",
+              options: () => [
+                { value: "", label: "全部状态" }, { value: "pending", label: "待开始" },
+                { value: "running", label: "进行中" }, { value: "finished", label: "已完成" },
+              ],
+            },
+            {
+              key: "job_id", label: "岗位",
+              options: () => [{ value: "", label: "全部岗位" }, ...this.allJobs.map((j) => ({ value: j.id, label: j.title }))],
+            },
+            {
+              key: "candidate_id", label: "候选人",
+              options: () => [{ value: "", label: "全部候选人" }, ...this.candidates.map((c) => ({ value: c.id, label: c.name }))],
+            },
+          ],
         },
       },
     };
@@ -178,6 +204,11 @@ const AdminView = {
       } catch (e) {
         this.allJobs = [];
       }
+      try {
+        this.candidates = await Mock.get("/api/admin/candidates?page=1&size=100", () => Mock.adminList("candidate", 1, 100).list);
+      } catch (e) {
+        this.candidates = [];
+      }
     },
     _enterpriseName(id) {
       const e = this.enterprises.find((x) => x.id === Number(id));
@@ -205,9 +236,10 @@ const AdminView = {
       this.pages[tab] = page;
       try {
         const size = this.sizes[tab];
+        const query = this.buildQuery(tab, page, size);
         const resp = await Mock.get(
-          `${this.meta[tab].endpoint}?page=${page}&size=${size}`,
-          () => Mock.adminList(tab, page, size)
+          `${this.meta[tab].endpoint}?${query}`,
+          () => Mock.adminList(tab, page, size, this.filters[tab])
         );
         const { list, total } = this.normalize(tab, resp);
         this.lists[tab] = list;
@@ -217,6 +249,21 @@ const AdminView = {
       } finally {
         this.loading[tab] = false;
       }
+    },
+    /** 拼接分页 + 筛选查询参数 */
+    buildQuery(tab, page, size) {
+      const params = new URLSearchParams({ page, size });
+      const f = this.filters[tab];
+      if (f) {
+        for (const key of Object.keys(f)) {
+          if (f[key] !== "" && f[key] !== null && f[key] !== undefined) params.set(key, f[key]);
+        }
+      }
+      return params.toString();
+    },
+    /** 筛选条件变化 → 回到第一页重新加载 */
+    applyFilters() {
+      if (this.filters[this.tab]) this.load(this.tab, 1);
     },
     changeSize(e) {
       this.sizes[this.tab] = Number(e.target.value);
@@ -254,6 +301,7 @@ const AdminView = {
       return v;
     },
     async save() {
+      if (this.cur.readonly) return; // 只读资源不可增改
       // 校验必填
       for (const f of this.cur.fields || []) {
         if (f.required && (this.form[f.key] === undefined || this.form[f.key] === "")) {
@@ -290,6 +338,7 @@ const AdminView = {
       }
     },
     async del(row) {
+      if (this.cur.readonly) return; // 只读资源不可删除
       if (!confirm(`确定删除「${row.name || row.title || row.question || '该记录'}」吗？此操作不可恢复。`)) return;
       const tab = this.tab;
       try {
@@ -303,6 +352,42 @@ const AdminView = {
     _closeModal() {
       const el = document.getElementById("crudModal");
       if (el && window.bootstrap) bootstrap.Modal.getInstance(el)?.hide();
+    },
+    // ===== 详情弹窗共用格式化 =====
+    catName(cat) {
+      const map = {
+        self_intro: "自我介绍", project: "项目经历", technical: "专业技能",
+        behavioral: "综合素质", reverse: "反问环节",
+      };
+      return map[cat] || cat || "—";
+    },
+    scoreClass(score) {
+      if (score == null) return "text-muted";
+      return score >= 85 ? "text-success" : score >= 70 ? "text-primary" : "text-warning";
+    },
+    scoreBadge(score) {
+      if (score == null) return "bg-secondary";
+      return score >= 85 ? "bg-success" : score >= 70 ? "bg-primary" : "bg-warning";
+    },
+    levelClass(level) {
+      return { 优秀: "bg-success", 良好: "bg-primary", 待提升: "bg-warning" }[level] || "bg-secondary";
+    },
+    /** 查看面试记录详情（逐题问答 + 报告概要） */
+    async viewInterview(row) {
+      const el = document.getElementById("interviewDetailModal");
+      if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
+      this.detail = null;
+      this.detailRow = row;
+      this.detailLoading = true;
+      this.detailError = "";
+      try {
+        // TODO 联调: 面试详情接口（含逐题与报告）由成员B 提供后调整
+        this.detail = await Mock.get(`/api/interview/${row.id}/report`, () => Mock.report(row.id));
+      } catch (e) {
+        this.detailError = e.message;
+      } finally {
+        this.detailLoading = false;
+      }
     },
   },
   template: `
@@ -324,9 +409,19 @@ const AdminView = {
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">{{ cur.label }}管理</h5>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#crudModal" @click="openAdd()">
+            <button v-if="!cur.readonly" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#crudModal" @click="openAdd()">
               ＋ 新增{{ cur.label }}
             </button>
+          </div>
+
+          <!-- 筛选栏（仅面试记录等有 filters 配置的资源） -->
+          <div v-if="cur.filters" class="row g-2 mb-3 align-items-end">
+            <div class="col-auto" v-for="f in cur.filters" :key="f.key">
+              <label class="form-label small text-muted mb-1">{{ f.label }}</label>
+              <select class="form-select form-select-sm" v-model="filters[tab][f.key]" @change="applyFilters()">
+                <option v-for="o in fieldOptions(f)" :key="o.value" :value="o.value">{{ o.label }}</option>
+              </select>
+            </div>
           </div>
 
           <div v-if="curLoading" class="text-center text-muted py-4">
@@ -334,14 +429,14 @@ const AdminView = {
           </div>
 
           <div v-else-if="curList.length === 0" class="text-center text-muted py-4">
-            暂无{{ cur.label }}数据，点击右上角新增。
+            {{ cur.readonly ? '暂无面试记录。' : '暂无' + cur.label + '数据，点击右上角新增。' }}
           </div>
 
           <table v-else class="table table-hover align-middle">
             <thead>
               <tr>
                 <th v-for="c in cur.columns" :key="c.key">{{ c.label }}</th>
-                <th style="width: 140px;">操作</th>
+                <th style="width: 100px;">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -350,8 +445,13 @@ const AdminView = {
                   {{ cellText(row, c) }}
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#crudModal" @click="openEdit(row)">编辑</button>
-                  <button class="btn btn-sm btn-outline-danger" @click="del(row)">删除</button>
+                  <template v-if="cur.readonly">
+                    <button class="btn btn-sm btn-outline-info" @click="viewInterview(row)">详情</button>
+                  </template>
+                  <template v-else>
+                    <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#crudModal" @click="openEdit(row)">编辑</button>
+                    <button class="btn btn-sm btn-outline-danger" @click="del(row)">删除</button>
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -376,8 +476,8 @@ const AdminView = {
         </div>
       </div>
 
-      <!-- 新增/编辑弹窗 -->
-      <div class="modal fade" id="crudModal" tabindex="-1">
+      <!-- 新增/编辑弹窗（只读资源如面试记录无此弹窗） -->
+      <div v-if="!cur.readonly" class="modal fade" id="crudModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
           <div class="modal-content">
             <div class="modal-header">
@@ -404,6 +504,60 @@ const AdminView = {
               <button class="btn btn-primary" @click="save()" :disabled="saving">
                 <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>保存
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 面试记录详情弹窗（逐题问答 + 报告概要） -->
+      <div v-if="tab === 'interview'" class="modal fade" id="interviewDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">面试 #{{ detailRow ? detailRow.id : '—' }} 详情</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div v-if="detailLoading" class="text-center text-muted py-4">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>加载中…
+              </div>
+              <div v-else-if="detailError" class="alert alert-danger">{{ detailError }}</div>
+              <template v-else-if="detail">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="me-3 text-center px-2">
+                    <div class="fs-3 fw-bold" :class="scoreClass(detail.total_score)">{{ detail.total_score }}</div>
+                    <div class="text-muted small">总分</div>
+                  </div>
+                  <div>
+                    <p class="mb-1"><strong>岗位：</strong>{{ detail.job_title }}</p>
+                    <p class="mb-1"><strong>候选人：</strong>{{ detailRow.candidate_name }}</p>
+                    <p class="mb-1">
+                      <strong>等级：</strong><span class="badge" :class="levelClass(detail.level)">{{ detail.level }}</span>
+                    </p>
+                    <p class="mb-0 text-muted small"><strong>时间：</strong>{{ detailRow.created_at }}</p>
+                  </div>
+                </div>
+                <hr>
+                <h6 class="mb-2">逐题问答</h6>
+                <div v-if="!(detail.answers||[]).length" class="text-muted small">暂无答题记录</div>
+                <div v-for="a in (detail.answers||[])" :key="a.round_no" class="border rounded p-2 mb-2">
+                  <details class="report-details">
+                    <summary class="fw-bold">
+                      第 {{ a.round_no }} 题 · {{ catName(a.category) }}
+                      <span class="ms-2 badge" :class="scoreBadge(a.score)">{{ a.score ?? '—' }} 分</span>
+                    </summary>
+                    <div class="mt-2 small">
+                      <p class="mb-1"><strong>问题：</strong>{{ a.question }}</p>
+                      <p class="mb-1"><strong>回答：</strong>{{ a.answer_text }}</p>
+                      <p class="mb-0"><strong>反馈：</strong>{{ a.feedback }}</p>
+                    </div>
+                  </details>
+                </div>
+              </template>
+              <div v-else class="text-muted text-center py-4">暂无数据</div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
             </div>
           </div>
         </div>
