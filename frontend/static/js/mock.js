@@ -223,6 +223,21 @@ const Mock = {
 
   report(id) {
     const plan = this._ensurePlan(id);
+    // 未作答（静态历史/中途退出）的面试：合成一份演示答案，保证报告完整
+    if (!plan.answers.length) {
+      plan.answers = plan.questions.map((q, i) => {
+        const score = 70 + ((i * 7) % 26);
+        return {
+          round_no: i + 1,
+          category: q.category,
+          question: q.question,
+          answer_text:
+            "（演示数据）针对「" + q.question.slice(0, 24) + "…」我结合项目经验与岗位要求展开说明，并给出了具体的量化结果。",
+          score: score,
+          feedback: this._feedback(q.category, score),
+        };
+      });
+    }
     const dims = [
       { name: "专业知识", score: 0 },
       { name: "项目经验", score: 0 },
@@ -230,17 +245,13 @@ const Mock = {
       { name: "逻辑思维", score: 0 },
       { name: "学习潜力", score: 0 },
     ];
-    if (plan.answers.length) {
-      plan.answers.forEach((a, i) => {
-        if (a.category === "technical") dims[0].score = a.score;
-        else if (a.category === "project") dims[1].score = a.score;
-        else if (a.category === "self_intro") dims[2].score = a.score;
-        else if (a.category === "behavioral") dims[3].score = a.score;
-        else dims[4].score = a.score;
-      });
-    } else {
-      dims.forEach((d, i) => (d.score = 70 + i * 3));
-    }
+    plan.answers.forEach((a) => {
+      if (a.category === "technical") dims[0].score = a.score;
+      else if (a.category === "project") dims[1].score = a.score;
+      else if (a.category === "self_intro") dims[2].score = a.score;
+      else if (a.category === "behavioral") dims[3].score = a.score;
+      else dims[4].score = a.score;
+    });
     dims.forEach((d) => { if (!d.score) d.score = 75; });
     const total = Math.round(dims.reduce((s, d) => s + d.score, 0) / dims.length);
     const level = total >= 85 ? "优秀" : total >= 70 ? "良好" : "待提升";

@@ -44,6 +44,11 @@ const CandidateView = {
       const map = { pending: "bg-secondary", running: "bg-primary", finished: "bg-success" };
       return map[status] || "bg-secondary";
     },
+    /** 得分 → 徽章颜色 */
+    scoreBadge(score) {
+      if (score == null) return "bg-secondary";
+      return score >= 85 ? "bg-success" : score >= 70 ? "bg-primary" : "bg-warning";
+    },
     async loadJobs() {
       this.loading = true;
       this.error = "";
@@ -240,7 +245,10 @@ const CandidateView = {
             <td>{{ h.id }}</td>
             <td>{{ h.job_title }}</td>
             <td><span class="badge" :class="statusClass(h.status)">{{ h.status }}</span></td>
-            <td>{{ h.total_score ?? '—' }}</td>
+            <td>
+              <span v-if="h.total_score != null" class="badge" :class="scoreBadge(h.total_score)">{{ h.total_score }}</span>
+              <span v-else class="text-muted">—</span>
+            </td>
             <td>{{ h.created_at }}</td>
             <td>
               <button v-if="h.status === 'finished'" class="btn btn-sm btn-outline-primary" @click="viewReport(h.id)">查看报告</button>

@@ -96,3 +96,25 @@ main > div {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ===== 报告页 ===== */
+/* 逐题复盘折叠 */
+.report-details summary {
+  cursor: pointer;
+  list-style: none;
+}
+.report-details summary::-webkit-details-marker {
+  display: none;
+}
+.report-details summary::before {
+  content: "▸ ";
+  color: #0d6efd;
+}
+.report-details[open] summary::before {
+  content: "▾ ";
+}
+
+/* 总分大数字 */
+.score-hero {
+  min-width: 96px;
+}

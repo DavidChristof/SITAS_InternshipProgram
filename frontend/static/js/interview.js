@@ -285,24 +285,246 @@ const ReportView = {
       error: "",
     };
   },
+  created() {
+    this.loadReport();
+  },
   methods: {
     back() {
       this.$emit("back");
     },
+    catName(cat) {
+      const map = {
+        self_intro: "自我介绍",
+        project: "项目经历",
+        technical: "专业技能",
+        behavioral: "综合素质",
+        reverse: "反问环节",
+      };
+      return map[cat] || cat || "—";
+    },
+    scoreClass(score) {
+      if (score == null) return "text-muted";
+      return score >= 85 ? "text-success" : score >= 70 ? "text-primary" : "text-warning";
+    },
+    scoreBadge(score) {
+      if (score == null) return "bg-secondary";
+      return score >= 85 ? "bg-success" : score >= 70 ? "bg-primary" : "bg-warning";
+    },
+    barClass(score) {
+      return this.scoreBadge(score);
+    },
+    levelClass(level) {
+      return { 优秀: "bg-success", 良好: "bg-primary", 待提升: "bg-warning" }[level] || "bg-secondary";
+    },
+    async loadReport() {
+      const id = this.interviewId;
+      if (id == null) {
+        this.error = "缺少面试编号，无法生成报告。";
+        return;
+      }
+      this.loading = true;
+      this.error = "";
+      try {
+        // TODO 联调: API.get(`/api/interview/${id}/report`)
+        this.report = await Mock.get(`/api/interview/${id}/report`, () => Mock.report(id));
+        this.$nextTick(() => this.drawRadar());
+      } catch (e) {
+        this.error = "加载报告失败：" + e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    /** 轻量 canvas 雷达图（无三方依赖） */
+    drawRadar() {
+      const canvas = this.$refs.radarCanvas;
+      if (!canvas || !this.report) return;
+      const dims = this.report.dimension_scores || [];
+      if (dims.length < 3) return;
+      const ctx = canvas.getContext("2d");
+      const W = canvas.width, H = canvas.height;
+      const cx = W / 2, cy = H / 2;
+      const R = Math.min(cx, cy) - 40;
+      const n = dims.length;
+      const LEVELS = 4;
+      ctx.clearRect(0, 0, W, H);
+
+      const point = (i, r) => {
+        const ang = (Math.PI * 2 * i) / n - Math.PI / 2;
+        return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+      };
+
+      // 同心网格
+      for (let lv = 1; lv <= LEVELS; lv++) {
+        const r = (R * lv) / LEVELS;
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+          const [x, y] = point(i % n, r);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = "#e3e6ea";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // 轴线 + 维度标签
+      ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = "#495057";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (let i = 0; i < n; i++) {
+        const [ax, ay] = point(i, R);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(ax, ay);
+        ctx.strokeStyle = "#e3e6ea";
+        ctx.stroke();
+        const [lx, ly] = point(i, R + 18);
+        ctx.fillText(dims[i].name, lx, ly);
+      }
+
+      // 数据多边形（分数 0-100 映射半径）
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) {
+        const s = Math.max(0, Math.min(100, dims[i % n].score || 0));
+        const [x, y] = point(i % n, (s / 100) * R);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "rgba(13, 110, 253, 0.22)";
+      ctx.fill();
+      ctx.strokeStyle = "#0d6efd";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 顶点
+      for (let i = 0; i < n; i++) {
+        const s = Math.max(0, Math.min(100, dims[i].score || 0));
+        const [x, y] = point(i, (s / 100) * R);
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#0d6efd";
+        ctx.fill();
+      }
+    },
   },
-  // TODO(阶段三): 实现 总分/等级/维度雷达图/优缺点/建议/逐题复盘
   template: `
   <div>
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="mb-0">📊 面试报告</h4>
       <button class="btn btn-outline-secondary btn-sm" @click="back()">← 返回候选人端</button>
     </div>
-    <div class="card">
-      <div class="card-body text-center text-muted py-5">
-        <div class="display-6 mb-2">🚧</div>
-        <h5>面试 #{{ interviewId }}</h5>
-        <p>结果报告功能将在<b>阶段三</b>实现（总分 / 等级 / 维度雷达图 / 优缺点 / 改进建议）。</p>
+
+    <div v-if="loading" class="text-center text-muted py-5">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>报告生成中…
+    </div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <template v-else-if="report">
+      <!-- 总分概要 -->
+      <div class="card mb-3">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-4 text-center px-3 score-hero">
+            <div class="display-4 fw-bold" :class="scoreClass(report.total_score)">{{ report.total_score }}</div>
+            <div class="text-muted small">总分</div>
+          </div>
+          <div>
+            <h5 class="mb-2">🏢 {{ report.job_title }}</h5>
+            <p class="mb-1">
+              <span class="badge" :class="levelClass(report.level)">{{ report.level }}</span>
+              <span class="text-muted ms-2 small">候选人：{{ report.candidate_name }}</span>
+              <span class="text-muted ms-2 small">时间：{{ report.created_at }}</span>
+            </p>
+            <p class="text-muted small mb-0">本报告由 AI 面试官根据面试表现自动生成。</p>
+          </div>
+        </div>
       </div>
+
+      <div class="row">
+        <!-- 雷达图 -->
+        <div class="col-md-5 mb-3">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <h6 class="card-title mb-3">能力维度雷达</h6>
+              <div class="d-flex justify-content-center">
+                <canvas ref="radarCanvas" width="400" height="400" style="max-width:100%;"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 维度进度条 -->
+        <div class="col-md-7 mb-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h6 class="card-title mb-3">各维度得分</h6>
+              <div v-for="d in (report.dimension_scores||[])" :key="d.name" class="mb-3">
+                <div class="d-flex justify-content-between small mb-1">
+                  <span>{{ d.name }}</span>
+                  <span class="fw-bold" :class="scoreClass(d.score)">{{ d.score }} 分</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar" :class="barClass(d.score)" :style="{width: (d.score||0) + '%'}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 优缺点 -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="card h-100 border-success">
+            <div class="card-header bg-success text-white">💪 优点</div>
+            <div class="card-body">
+              <ul class="mb-0"><li v-for="(s,i) in (report.strengths||[])" :key="i">{{ s }}</li></ul>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <div class="card h-100 border-warning">
+            <div class="card-header bg-warning text-dark">⚠️ 待改进</div>
+            <div class="card-body">
+              <ul class="mb-0"><li v-for="(s,i) in (report.weaknesses||[])" :key="i">{{ s }}</li></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 改进建议 -->
+      <div class="card mb-3">
+        <div class="card-header">📈 改进建议</div>
+        <div class="card-body">
+          <ol class="mb-0"><li v-for="(s,i) in (report.suggestions||[])" :key="i">{{ s }}</li></ol>
+        </div>
+      </div>
+
+      <!-- 逐题复盘 -->
+      <div class="card">
+        <div class="card-header">🗒 逐题复盘（共 {{ (report.answers||[]).length }} 题）</div>
+        <div class="card-body">
+          <div v-if="!(report.answers||[]).length" class="text-muted text-center py-3">暂无逐题数据</div>
+          <div v-for="a in (report.answers||[])" :key="a.round_no" class="border rounded p-2 mb-2">
+            <details class="report-details">
+              <summary class="fw-bold">
+                第 {{ a.round_no }} 题 · {{ catName(a.category) }}
+                <span class="ms-2 badge" :class="scoreBadge(a.score)">{{ a.score ?? '—' }} 分</span>
+              </summary>
+              <div class="mt-2 small">
+                <p class="mb-1"><strong>问题：</strong>{{ a.question }}</p>
+                <p class="mb-1"><strong>我的回答：</strong>{{ a.answer_text }}</p>
+                <p class="mb-0"><strong>反馈：</strong>{{ a.feedback }}</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div v-else class="card">
+      <div class="card-body text-center text-muted py-5">未找到该面试的报告。</div>
     </div>
   </div>`,
 };
