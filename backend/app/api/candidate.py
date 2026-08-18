@@ -3,8 +3,8 @@
 接口契约（成员C依赖，请保持路径/参数不变，改动需通知C）：
     POST /api/candidate/resume             上传简历（multipart，字段 file）→ 解析并返回候选人档案
     GET  /api/candidate/jobs               可投递岗位列表（含企业名）
-    POST /api/candidate/interview          创建一场面试（body: {candidate_id, job_id}）→ 返回 interview_id（第二阶段）
-    GET  /api/candidate/interviews         我的面试历史（含状态、总分）（第二阶段）
+    POST /api/candidate/interview          创建一场面试（body: {candidate_id, job_id}）→ 返回 interview_id
+    GET  /api/candidate/interviews         我的面试历史（含状态、总分）
     GET  /api/candidate/interview/{id}     面试详情（逐题问答+评分+报告）（第三阶段）
 """
 from __future__ import annotations
@@ -13,13 +13,13 @@ import json
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
-from ..models import Candidate, Enterprise, Job
-from ..schemas import ok
+from ..models import Candidate, Enterprise, Interview, Job
+from ..schemas import InterviewCreate, fail, ok
 from ..services import resume_parser
 
 router = APIRouter(prefix="/api/candidate", tags=["候选人端"])
@@ -104,3 +104,48 @@ def upload_resume(
             "profile": profile,
         }
     )
+
+
+@router.post("/interview")
+def create_interview(body: InterviewCreate, db: Session = Depends(get_db)):
+    """创建一场面试（pending 状态），返回 interview_id。"""
+    if db.get(Candidate, body.candidate_id) is None:
+        return fail(1001, "候选人不存在")
+    if db.get(Job, body.job_id) is None:
+        return fail(1001, "岗位不存在")
+    iv = Interview(candidate_id=body.candidate_id, job_id=body.job_id, status="pending", current_round=0)
+    db.add(iv)
+    db.commit()
+    db.refresh(iv)
+    return ok({"interview_id": iv.id, "status": iv.status})
+
+
+@router.get("/interviews")
+def list_interviews(candidate_id: int = Query(...), db: Session = Depends(get_db)):
+    """我的面试历史（含岗位名、状态、总分），按创建时间倒序。"""
+    q = (
+        db.query(Interview, Job.title)
+        .join(Job, Interview.job_id == Job.id)
+        .filter(Interview.candidate_id == candidate_id)
+    )
+    rows = q.order_by(Interview.id.desc()).all()
+    items = []
+    for iv, job_title in rows:
+        report: dict = {}
+        if iv.report_json:
+            try:
+                report = json.loads(iv.report_json)
+            except json.JSONDecodeError:
+                report = {}
+        items.append(
+            {
+                "interview_id": iv.id,
+                "job_id": iv.job_id,
+                "job_title": job_title,
+                "status": iv.status,
+                "current_round": iv.current_round,
+                "total_score": report.get("total_score"),
+                "created_at": iv.created_at.isoformat() if iv.created_at else None,
+            }
+        )
+    return ok(items)

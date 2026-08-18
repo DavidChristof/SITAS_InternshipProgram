@@ -44,6 +44,7 @@ class InterviewAnswer(Base):
     round_no: Mapped[int] = mapped_column(Integer, default=1)  # 第几轮
     category: Mapped[str] = mapped_column(String(30), default="")  # 环节类型
     question: Mapped[str] = mapped_column(Text)  # 面试官问题
+    expected_points: Mapped[str] = mapped_column(Text, default="")  # 评分要点（逗号分隔）
     answer_text: Mapped[str] = mapped_column(Text, default="")  # 候选人回答
     audio_url: Mapped[str] = mapped_column(String(200), default="")  # 语音回答文件路径
     score: Mapped[float | None] = mapped_column(Float, nullable=True)  # 单题评分 0-100
