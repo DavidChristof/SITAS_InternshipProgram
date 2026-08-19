@@ -23,6 +23,16 @@ _SCHOOL_RE = re.compile(r"[一-龥]{2,20}?(?:大学|学院)")
 
 _DEGREE_KEYWORDS = ["博士", "硕士", "本科", "大专", "学士"]
 
+# ---- 姓名启发式（无 key 降级时兜底）----
+_NAME_HEADER_RE = re.compile(r"姓\s*名\s*[:：]\s*([一-龥]{2,4})")
+_NAME_ISOLATED_RE = re.compile(r"^[一-龥]{2,4}$")
+# 单独一行短中文但很可能是标题/栏目名，排除掉，降低误判
+_NAME_BLACKLIST = (
+    "简历", "求职", "应聘", "履历", "自我介绍", "教育", "专业", "学校",
+    "大学", "学院", "技能", "项目", "实习", "联系方式", "意向", "个人",
+    "应届", "基本", "情况", "信息", "经历",
+)
+
 _MAJOR_KEYWORDS = [
     "计算机科学与技术", "软件工程", "人工智能", "电子信息工程", "通信工程",
     "数据科学与大数据技术", "信息管理与信息系统", "网络工程", "数学与应用数学",
@@ -153,6 +163,25 @@ def _extract_skills(text: str) -> list[str]:
     return _dedupe([name for pat, name in _SKILL_PATTERNS if pat.search(text)])
 
 
+def _rule_name(text: str) -> str:
+    """规则提取姓名（降级兜底）。
+
+    优先级：显式「姓名：」字段 > 单独一行的 2~4 字纯中文（黑名单过滤标题/栏目名）。
+    返回空串表示规则无法确定，交由 LLM 或前端表单 name 字段补齐。
+    """
+    m = _NAME_HEADER_RE.search(text)
+    if m:
+        return m.group(1)
+    for line in text.splitlines():
+        line = line.strip()
+        if not (2 <= len(line) <= 4) or not _NAME_ISOLATED_RE.match(line):
+            continue
+        if any(k in line for k in _NAME_BLACKLIST):
+            continue
+        return line
+    return ""
+
+
 def _clean_school(raw: str) -> str:
     """循环剥掉"本科/毕业于/于"等前缀，直到没有前缀可剥（避免剥完本科仍残留"毕业于"）。"""
     changed = True
@@ -203,7 +232,7 @@ def _rule_extract(text: str) -> dict[str, Any]:
     """纯规则提取的兜底画像。"""
     degree = next((d for d in _DEGREE_KEYWORDS if d in text), "")
     return {
-        "name": "",
+        "name": _rule_name(text),
         "email": (_EMAIL_RE.findall(text) or [""])[0],
         "phone": (_PHONE_RE.findall(text) or [""])[0],
         "degree": degree,
@@ -243,6 +272,10 @@ def _merge(rule: dict[str, Any], llm_data: dict[str, Any]) -> dict[str, Any]:
     out = dict(llm_data or {})
     for field in ("education", "projects", "skills", "internships", "summary"):
         out.setdefault(field, rule.get(field, [] if field != "summary" else ""))
+
+    # 姓名：LLM 未识别时用规则启发式兜底
+    if not out.get("name") and rule.get("name"):
+        out["name"] = rule["name"]
 
     for field in ("email", "phone", "degree"):
         if rule.get(field):

@@ -65,6 +65,7 @@ def build_index() -> int:
     docs: list[dict] = []
     for subdir, source in _SUBDIRS.items():
         docs.extend(load_json_docs(subdir, source))
+    retriever.clear()  # 先清空旧索引，保证重复调用不累积（幂等）
     retriever.add_documents(docs)
     logger.info("[knowledge_base] 已灌入 %d 条知识文档", len(docs))
     return len(docs)

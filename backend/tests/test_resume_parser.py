@@ -37,6 +37,35 @@ def test_rule_extract_contact_and_degree():
     assert r["years_experience"] == 3
 
 
+def test_rule_name_from_header():
+    assert resume_parser._rule_name("姓名：张三\n邮箱：z@x.com") == "张三"
+    assert resume_parser._rule_name("姓 名: 李四\n邮箱：z@x.com") == "李四"
+
+
+def test_rule_name_isolated_line():
+    # 单独一行的 2~4 字纯中文，视为姓名
+    assert resume_parser._rule_name("王小明\n电话：13812345678") == "王小明"
+
+
+def test_rule_name_ignores_header_lines():
+    # 标题/栏目名不应误判为姓名
+    assert resume_parser._rule_name("个人简历\n电话：13812345678") == ""
+    assert resume_parser._rule_name("求职意向\n目标岗位：后端开发") == ""
+    assert resume_parser._rule_name("项目经历\nxxx") == ""
+
+
+def test_rule_extract_gets_name():
+    r = resume_parser._rule_extract("赵六\n邮箱：zhao@example.com")
+    assert r["name"] == "赵六"
+
+
+def test_parse_resume_llm_without_name_fallback_rule(monkeypatch):
+    # LLM 未识别姓名时，用规则启发式兜底
+    _patch_chat_json(monkeypatch, result={"name": "", "skills": ["Python"]})
+    result = resume_parser.parse_resume("钱七\n邮箱：qian@example.com")
+    assert result["name"] == "钱七"
+
+
 def test_rule_extract_skills_lexicon():
     r = resume_parser._rule_extract(SAMPLE_TEXT)
     skills = r["skills"]

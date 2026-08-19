@@ -22,6 +22,15 @@ class Retriever:
     def doc_count(self) -> int:
         return len(self._docs)
 
+    def clear(self) -> None:
+        """清空已加载的文档与索引。
+
+        build_index 重建前调用，保证重复重建不会累积重复文档（幂等）。
+        """
+        self._docs = []
+        self._tokenized = []
+        self._bm25 = None
+
     def add_documents(self, docs: list[dict]) -> None:
         """docs: [{id, title, content, source, meta}]
 
