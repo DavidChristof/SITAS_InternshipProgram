@@ -192,20 +192,24 @@ const AdminView = {
     this.loadTab(this.tab);
   },
   methods: {
-    /** 加载表单下拉所需的企业/岗位列表 */
+    /** 加载表单下拉所需的企业/岗位/候选人列表 */
     async loadReference() {
+      // 注意：接口可能返回纯数组或 {list,total}，统一经 normalize() 归一化为数组（与 load() 一致）
       try {
-        this.enterprises = await Mock.get("/api/admin/enterprises?page=1&size=100", () => Mock.adminList("enterprise", 1, 100).list);
+        const r = await Mock.get("/api/admin/enterprises?page=1&size=100", () => Mock.adminList("enterprise", 1, 100).list);
+        this.enterprises = this.normalize("enterprise", r).list;
       } catch (e) {
         this.enterprises = [];
       }
       try {
-        this.allJobs = await Mock.get("/api/admin/jobs?page=1&size=100", () => Mock.adminList("job", 1, 100).list);
+        const r = await Mock.get("/api/admin/jobs?page=1&size=100", () => Mock.adminList("job", 1, 100).list);
+        this.allJobs = this.normalize("job", r).list;
       } catch (e) {
         this.allJobs = [];
       }
       try {
-        this.candidates = await Mock.get("/api/admin/candidates?page=1&size=100", () => Mock.adminList("candidate", 1, 100).list);
+        const r = await Mock.get("/api/admin/candidates?page=1&size=100", () => Mock.adminList("candidate", 1, 100).list);
+        this.candidates = this.normalize("candidate", r).list;
       } catch (e) {
         this.candidates = [];
       }
