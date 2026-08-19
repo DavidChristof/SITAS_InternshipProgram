@@ -163,8 +163,22 @@ const AdminView = {
     };
   },
   computed: {
+    /** 当前身份（由根组件注入，方案A） */
+    role() {
+      return this.$root.role;
+    },
+    /** 按角色过滤后的管理页 tab（方案A C2）：HR 隐藏「面试官」；管理员追加「系统管理」 */
+    adminTabs() {
+      const base = [
+        { k: "enterprise", t: "企业" }, { k: "job", t: "岗位" }, { k: "candidate", t: "候选人" },
+        { k: "interviewer", t: "面试官" }, { k: "question", t: "题库" }, { k: "interview", t: "面试记录" },
+      ];
+      if (this.role === "hr") return base.filter((t) => t.k !== "interviewer");
+      if (this.role === "admin") return [...base, { k: "system", t: "系统管理" }];
+      return base;
+    },
     cur() {
-      return this.meta[this.tab];
+      return this.meta[this.tab] || { built: false, label: "系统管理", columns: [], fields: [] };
     },
     curList() {
       return this.lists[this.tab] || [];
@@ -181,13 +195,33 @@ const AdminView = {
     curLoading() {
       return !!this.loading[this.tab];
     },
+    // ===== 系统管理页数据概览计数 =====
+    enterpriseCount() {
+      return (this.lists.enterprise || []).length;
+    },
+    jobCount() {
+      return (this.lists.job || []).length;
+    },
+    candidateCount() {
+      return (this.lists.candidate || []).length;
+    },
+    questionCount() {
+      return (this.lists.question || []).length;
+    },
+  },
+  watch: {
+    // 切换身份后若当前 tab 不在新角色允许范围内，回到企业页
+    role() {
+      const allowed = this.adminTabs.map((t) => t.k);
+      if (!allowed.includes(this.tab)) this.loadTab("enterprise");
+    },
   },
   created() {
     this.sizes = { enterprise: 10, job: 10, candidate: 10, interviewer: 10, question: 10, interview: 10 };
     this.pages = { enterprise: 1, job: 1, candidate: 1, interviewer: 1, question: 1, interview: 1 };
-    // 支持 ?view=admin&tab=candidate 深链，便于测试与演示
+    // 支持 ?view=admin&tab=candidate 深链，便于测试与演示（system 为虚拟 tab，仅管理员）
     const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab && this.meta[tab]) this.tab = tab;
+    if (tab && (tab === "system" || this.meta[tab])) this.tab = tab;
     this.loadReference();
     this.loadTab(this.tab);
   },
@@ -231,9 +265,17 @@ const AdminView = {
       return { list, total };
     },
     async loadTab(tab) {
+      if (tab === "system" && this.role !== "admin") tab = "enterprise"; // 系统管理仅管理员可见
       this.tab = tab;
       this.error = "";
-      if (this.meta[tab].built && !this.lists[tab]) await this.load(tab, 1);
+      if (tab === "system") {
+        // 系统管理页：预加载各资源列表用于数据概览计数
+        for (const t of ["enterprise", "job", "candidate", "interviewer", "question", "interview"]) {
+          if (!this.lists[t]) await this.load(t, 1);
+        }
+        return;
+      }
+      if (this.meta[tab] && this.meta[tab].built && !this.lists[tab]) await this.load(tab, 1);
     },
     async load(tab, page) {
       this.loading[tab] = true;
@@ -391,17 +433,42 @@ const AdminView = {
   <div>
     <h4 class="mb-3">🛠 后台管理</h4>
     <ul class="nav nav-pills mb-3">
-      <li class="nav-item" v-for="t in [
-        {k:'enterprise', t:'企业'}, {k:'job', t:'岗位'}, {k:'candidate', t:'候选人'},
-        {k:'interviewer', t:'面试官'}, {k:'question', t:'题库'}, {k:'interview', t:'面试记录'}]"
-        :key="t.k">
+      <li class="nav-item" v-for="t in adminTabs" :key="t.k">
         <a class="nav-link" :class="{active: tab===t.k}" href="#" @click.prevent="loadTab(t.k)">{{ t.t }}</a>
       </li>
     </ul>
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
-    <!-- ===== 已实现资源：通用 CRUD ===== -->
-    <div v-if="cur.built">
+    <!-- ===== 系统管理（管理员专属，方案A C3） ===== -->
+    <div v-if="tab === 'system'">
+      <div class="card mb-3">
+        <div class="card-header">🔐 三类身份入口说明</div>
+        <div class="card-body">
+          <table class="table table-sm mb-0 align-middle">
+            <thead><tr><th>身份</th><th>入口</th><th>功能范围</th></tr></thead>
+            <tbody>
+              <tr><td>🎓 学生</td><td>候选人端</td><td>简历上传、岗位选择、AI 面试、逐题评分反馈、结果报告、历史记录</td></tr>
+              <tr><td>👩‍💼 HR / 教师</td><td>后台（HR 视角）</td><td>企业、岗位、候选人、题库、面试记录管理 + 查看报告（无面试官管理）</td></tr>
+              <tr><td>🛡️ 管理员</td><td>后台（管理视角）</td><td>全部管理功能 + 面试官管理 + 系统管理</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">📊 数据概览</div>
+        <div class="card-body">
+          <div class="row text-center g-3">
+            <div class="col-3"><div class="fs-3 fw-bold text-primary">{{ enterpriseCount }}</div><div class="text-muted small">企业</div></div>
+            <div class="col-3"><div class="fs-3 fw-bold text-success">{{ jobCount }}</div><div class="text-muted small">岗位</div></div>
+            <div class="col-3"><div class="fs-3 fw-bold text-warning">{{ candidateCount }}</div><div class="text-muted small">候选人</div></div>
+            <div class="col-3"><div class="fs-3 fw-bold text-info">{{ questionCount }}</div><div class="text-muted small">题目</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 已实现资源：通用 CRUD（cur 恒有 built 兜底，无需 &&） ===== -->
+    <template v-else-if="cur.built">
       <div class="card">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
@@ -559,7 +626,7 @@ const AdminView = {
           </div>
         </div>
       </div>
-    </div>
+    </template>
 
     <!-- ===== 未实现资源：占位 ===== -->
     <div v-else class="card">

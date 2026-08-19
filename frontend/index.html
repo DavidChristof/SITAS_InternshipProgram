@@ -14,31 +14,87 @@
 </head>
 <body>
   <div id="app">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <!-- ===== 身份选择首屏（方案A C1：未选身份时展示） ===== -->
+    <div v-if="!role" class="role-select">
       <div class="container">
-        <a class="navbar-brand" href="#">🤖 SITAS 智能面试官</a>
-        <div class="navbar-nav">
-          <a class="nav-link" :class="{ active: currentView === 'candidate' }" href="#" @click.prevent="goCandidate()">候选人端</a>
-          <a class="nav-link" :class="{ active: currentView === 'admin' }" href="#" @click.prevent="goAdmin()">后台管理</a>
+        <div class="text-center mb-4">
+          <h1 class="mb-2">🤖 SITAS 智能面试官</h1>
+          <p class="text-muted mb-0">AI 智能面试官与人才评估系统 —— 校园招聘模拟 · 岗位能力评估</p>
+          <p class="text-muted">请选择你的身份进入</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+          <div class="col-md-4" @click="selectRole('student')">
+            <div class="card role-card h-100 text-center">
+              <div class="card-body py-4">
+                <div class="display-5 mb-2">🎓</div>
+                <h5>学生</h5>
+                <p class="text-muted small mb-0">简历上传 · 岗位选择 · AI 面试 · 结果报告 · 历史记录</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4" @click="selectRole('hr')">
+            <div class="card role-card h-100 text-center">
+              <div class="card-body py-4">
+                <div class="display-5 mb-2">👩‍💼</div>
+                <h5>HR / 教师</h5>
+                <p class="text-muted small mb-0">企业 · 岗位 · 候选人 · 题库 · 面试记录管理</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4" @click="selectRole('admin')">
+            <div class="card role-card h-100 text-center">
+              <div class="card-body py-4">
+                <div class="display-5 mb-2">🛡️</div>
+                <h5>管理员</h5>
+                <p class="text-muted small mb-0">全部管理功能 + 面试官管理 · 系统管理</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </nav>
+    </div>
 
-    <main class="container mt-4">
-      <!-- 候选人端视图（成员C实现）。注意：in-DOM 模板中组件标签必须用 kebab-case，
-           浏览器会把 <CandidateView> 小写成 <candidateview>，Vue 无法还原大小写导致组件解析失败 -->
-      <candidate-view v-if="currentView === 'candidate'" @start-interview="startInterview" @view-report="viewReport"></candidate-view>
-      <!-- 后台管理视图（成员C实现） -->
-      <admin-view v-else-if="currentView === 'admin'"></admin-view>
-      <!-- 面试对话视图（成员C实现，阶段二完善） -->
-      <interview-view v-else-if="currentView === 'interview'" :interview="interviewContext" @back="backToCandidate" @view-report="viewReport"></interview-view>
-      <!-- 面试报告视图（成员C实现，阶段三完善） -->
-      <report-view v-else-if="currentView === 'report'" :interview-id="reportId" @back="backToCandidate"></report-view>
-    </main>
+    <!-- ===== 主应用（已选身份） ===== -->
+    <template v-else>
+      <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+          <a class="navbar-brand" href="#">🤖 SITAS 智能面试官</a>
+          <div class="navbar-nav me-auto">
+            <!-- 身份门控：仅学生见候选人端；仅 HR/管理员见后台 -->
+            <a v-if="role === 'student'" class="nav-link" :class="{ active: currentView === 'candidate' }" href="#" @click.prevent="goCandidate()">候选人端</a>
+            <a v-if="role === 'hr' || role === 'admin'" class="nav-link" :class="{ active: currentView === 'admin' }" href="#" @click.prevent="goAdmin()">后台管理</a>
+          </div>
+          <!-- 身份切换（方案A C1） -->
+          <div class="dropdown">
+            <button class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+              👤 {{ roleName }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><h6 class="dropdown-header">切换身份</h6></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="selectRole('student')">🎓 学生</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="selectRole('hr')">👩‍💼 HR / 教师</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="selectRole('admin')">🛡️ 管理员</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
 
-    <footer class="text-center text-muted py-4">
-      SITAS —— AI 智能面试官与人才评估系统 · 实习项目
-    </footer>
+      <main class="container mt-4">
+        <!-- 候选人端视图（成员C实现）。注意：in-DOM 模板中组件标签必须用 kebab-case，
+             浏览器会把 <CandidateView> 小写成 <candidateview>，Vue 无法还原大小写导致组件解析失败 -->
+        <candidate-view v-if="currentView === 'candidate'" @start-interview="startInterview" @view-report="viewReport"></candidate-view>
+        <!-- 后台管理视图（成员C实现） -->
+        <admin-view v-else-if="currentView === 'admin'"></admin-view>
+        <!-- 面试对话视图（成员C实现） -->
+        <interview-view v-else-if="currentView === 'interview'" :interview="interviewContext" @back="backToCandidate" @view-report="viewReport"></interview-view>
+        <!-- 面试报告视图（成员C实现） -->
+        <report-view v-else-if="currentView === 'report'" :interview-id="reportId" @back="backToCandidate"></report-view>
+      </main>
+
+      <footer class="text-center text-muted py-4">
+        SITAS —— AI 智能面试官与人才评估系统 · 实习项目
+      </footer>
+    </template>
   </div>
 
   <!-- 全局 API 封装（成员C维护） -->
