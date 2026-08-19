@@ -3,8 +3,8 @@
  * 页面：面试大厅（岗位列表） / 简历上传 / 历史记录。
  *
  * 联调说明：
- *   后端接口未实现时统一用 Mock.xxx(url, mockFn) 兜底，接口就绪后改为 API.xxx 即可。
- *   候选人身份由根组件维护（localStorage），上传简历后获得 candidate_id 才能开始面试。
+ *   jobs/interviews/resume/interview 已接真实 API（API.xxx）；候选人身份由根组件维护（localStorage），
+ *   上传简历后获得 candidate_id 才能开始面试。语音转写接口推迟（联调 #5），暂保留 Mock。
  */
 const CandidateView = {
   data() {
@@ -57,7 +57,7 @@ const CandidateView = {
       this.loading = true;
       this.error = "";
       try {
-        const r = await Mock.get("/api/candidate/jobs", () => Mock.jobs());
+        const r = API.unwrap(await API.get("/api/candidate/jobs"));
         this.jobs = this.toList(r);
       } catch (e) {
         this.error = e.message;
@@ -67,8 +67,14 @@ const CandidateView = {
     },
     async loadHistory() {
       this.historyLoading = true;
+      const cid = this.candidate && this.candidate.id;
+      if (!cid) {
+        // 未上传简历尚无候选人身份，后端 /interviews 要求 candidate_id 必填
+        this.historyLoading = false;
+        return;
+      }
       try {
-        const r = await Mock.get("/api/candidate/interviews", () => Mock.interviews());
+        const r = API.unwrap(await API.get(`/api/candidate/interviews?candidate_id=${cid}`));
         this.history = this.toList(r);
       } catch (e) {
         this.history = [];
@@ -97,8 +103,7 @@ const CandidateView = {
       fd.append("email", this.resumeForm.email);
       fd.append("file", this.resumeForm.file);
       try {
-        // TODO 联调: 换成 API.upload("/api/candidate/resume", fd)
-        const profile = await Mock.upload("/api/candidate/resume", fd, () => Mock.uploadResume(fd));
+        const profile = API.unwrap(await API.upload("/api/candidate/resume", fd));
         this.uploadResult = profile;
         this.$root.setCandidate(profile); // 保存候选人身份，供选岗面试使用
         alert("简历上传并解析成功！");
@@ -118,11 +123,8 @@ const CandidateView = {
       this.startingId = job.id;
       this.error = "";
       try {
-        // TODO 联调: 换成 API.post("/api/candidate/interview", { candidate_id, job_id })
-        const resp = await Mock.post(
-          "/api/candidate/interview",
-          { candidate_id: this.candidate.id, job_id: job.id },
-          () => Mock.createInterview({ candidate_id: this.candidate.id, job_id: job.id })
+        const resp = API.unwrap(
+          await API.post("/api/candidate/interview", { candidate_id: this.candidate.id, job_id: job.id })
         );
         const interviewId = resp.interview_id;
         this.$emit("start-interview", { id: interviewId, jobId: job.id, jobTitle: job.title });

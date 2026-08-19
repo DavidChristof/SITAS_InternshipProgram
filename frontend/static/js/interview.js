@@ -4,7 +4,7 @@
  *  - ReportView：面试结果报告（总分 / 雷达图 / 优缺点 / 建议），阶段三完善。
  *
  * 面试流程：begin() 启动 → submitAnswer() 逐题提交（展示评分反馈 + 下一题）→ 结束 → 查看报告。
- * 联调说明：接口未实现时用 Mock.post/upload 兜底（mock 会维护同一场面试的题目与答题记录）。
+ * 联调说明：start/answer/report 已接真实 API；语音转写接口推迟（联调 #5），录音上传暂保留 Mock。
  */
 const InterviewView = {
   props: {
@@ -84,8 +84,7 @@ const InterviewView = {
       this.error = "";
       this.pushAi("面试即将开始，请认真作答。");
       try {
-        // TODO 联调: API.post(`/api/interview/${id}/start`)
-        const q = await Mock.post(`/api/interview/${id}/start`, null, () => Mock.startInterview(id));
+        const q = API.unwrap(await API.post(`/api/interview/${id}/start`));
         this.currentQuestion = q;
         this.roundNo = q.round_no || 1;
         this.totalRounds = q.total_rounds || 0;
@@ -106,11 +105,8 @@ const InterviewView = {
       this.submitting = true;
       this.error = "";
       try {
-        // TODO 联调: API.post(`/api/interview/${id}/answer`, { round_no, answer_text })
-        const r = await Mock.post(
-          `/api/interview/${id}/answer`,
-          { round_no: this.roundNo, answer_text: text },
-          () => Mock.submitAnswer(id, { round_no: this.roundNo, answer_text: text })
+        const r = API.unwrap(
+          await API.post(`/api/interview/${id}/answer`, { round_no: this.roundNo, answer_text: text })
         );
         this.lastResult = { score: r.score, feedback: r.feedback };
         if (r.finished) {
@@ -180,7 +176,7 @@ const InterviewView = {
         const fd = new FormData();
         fd.append("file", blob, `answer_${this.roundNo}.webm`);
         fd.append("round_no", String(this.roundNo));
-        // TODO 联调: 语音转写接口（成员B/A 提供）就绪后替换
+        // 语音转写接口已推迟（联调 #5），暂保留 Mock 演示；就绪后改为 API.upload(`/api/interview/${id}/audio`, fd)
         const r = await Mock.upload(`/api/interview/${id}/audio`, fd, () => Mock.transcribeAudio(fd));
         const text = (r && r.text) || "";
         if (text) {
@@ -288,6 +284,11 @@ const ReportView = {
   created() {
     this.loadReport();
   },
+  updated() {
+    // 报告内容渲染后（canvas 已挂载、$refs 就绪）再绘制雷达图；
+    // 不能用 $nextTick —— 它在 await 场景下可能先于 DOM 更新触发，canvas 还是 undefined
+    this.drawRadar();
+  },
   methods: {
     back() {
       this.$emit("back");
@@ -325,9 +326,7 @@ const ReportView = {
       this.loading = true;
       this.error = "";
       try {
-        // TODO 联调: API.get(`/api/interview/${id}/report`)
-        this.report = await Mock.get(`/api/interview/${id}/report`, () => Mock.report(id));
-        this.$nextTick(() => this.drawRadar());
+        this.report = API.unwrap(await API.get(`/api/interview/${id}/report`));
       } catch (e) {
         this.error = "加载报告失败：" + e.message;
       } finally {

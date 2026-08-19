@@ -5,7 +5,7 @@
  * 设计：配置驱动 —— 每个资源在 meta 中声明列(columns)、表单字段(fields)、接口(endpoint)，
  *       通用表格 + 弹窗表单 + 删除确认 + 分页。
  * 进度：阶段一完成 企业/岗位；候选人/面试官/题库（阶段二）、面试记录（阶段四）打开 built 开关即可。
- * 联调：统一用 Mock.get/post/put/del(url, mockFn) 兜底，接口就绪后改为 API.xxx。
+ * 联调：已全部接真实 API（API.get/post/put/del）。
  */
 const AdminView = {
   data() {
@@ -196,19 +196,19 @@ const AdminView = {
     async loadReference() {
       // 注意：接口可能返回纯数组或 {list,total}，统一经 normalize() 归一化为数组（与 load() 一致）
       try {
-        const r = await Mock.get("/api/admin/enterprises?page=1&size=100", () => Mock.adminList("enterprise", 1, 100).list);
+        const r = API.unwrap(await API.get("/api/admin/enterprises?page=1&size=100"));
         this.enterprises = this.normalize("enterprise", r).list;
       } catch (e) {
         this.enterprises = [];
       }
       try {
-        const r = await Mock.get("/api/admin/jobs?page=1&size=100", () => Mock.adminList("job", 1, 100).list);
+        const r = API.unwrap(await API.get("/api/admin/jobs?page=1&size=100"));
         this.allJobs = this.normalize("job", r).list;
       } catch (e) {
         this.allJobs = [];
       }
       try {
-        const r = await Mock.get("/api/admin/candidates?page=1&size=100", () => Mock.adminList("candidate", 1, 100).list);
+        const r = API.unwrap(await API.get("/api/admin/candidates?page=1&size=100"));
         this.candidates = this.normalize("candidate", r).list;
       } catch (e) {
         this.candidates = [];
@@ -241,10 +241,7 @@ const AdminView = {
       try {
         const size = this.sizes[tab];
         const query = this.buildQuery(tab, page, size);
-        const resp = await Mock.get(
-          `${this.meta[tab].endpoint}?${query}`,
-          () => Mock.adminList(tab, page, size, this.filters[tab])
-        );
+        const resp = API.unwrap(await API.get(`${this.meta[tab].endpoint}?${query}`));
         const { list, total } = this.normalize(tab, resp);
         this.lists[tab] = list;
         this.totals[tab] = total;
@@ -327,11 +324,9 @@ const AdminView = {
       });
       try {
         if (this.formMode === "add") {
-          // TODO 联调: API.post(this.cur.endpoint, body)
-          await Mock.post(this.cur.endpoint, body, () => Mock.adminCreate(tab, body));
+          await API.post(this.cur.endpoint, body);
         } else {
-          // TODO 联调: API.put(this.cur.endpoint + '/' + this.editId, body)
-          await Mock.put(`${this.cur.endpoint}/${this.editId}`, body, () => Mock.adminUpdate(tab, this.editId, body));
+          await API.put(`${this.cur.endpoint}/${this.editId}`, body);
         }
         this._closeModal();
         await this.load(tab, this.pages[tab]);
@@ -346,8 +341,7 @@ const AdminView = {
       if (!confirm(`确定删除「${row.name || row.title || row.question || '该记录'}」吗？此操作不可恢复。`)) return;
       const tab = this.tab;
       try {
-        // TODO 联调: API.del(this.cur.endpoint + '/' + row.id)
-        await Mock.del(`${this.cur.endpoint}/${row.id}`, () => Mock.adminDelete(tab, row.id));
+        await API.del(`${this.cur.endpoint}/${row.id}`);
         await this.load(tab, this.pages[tab]);
       } catch (e) {
         this.error = "删除失败：" + e.message;
@@ -385,8 +379,7 @@ const AdminView = {
       this.detailLoading = true;
       this.detailError = "";
       try {
-        // TODO 联调: 面试详情接口（含逐题与报告）由成员B 提供后调整
-        this.detail = await Mock.get(`/api/interview/${row.id}/report`, () => Mock.report(row.id));
+        this.detail = API.unwrap(await API.get(`/api/interview/${row.id}/report`));
       } catch (e) {
         this.detailError = e.message;
       } finally {
