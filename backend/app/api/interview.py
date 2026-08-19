@@ -228,6 +228,7 @@ def _adapt_report(raw: dict, interview_id: int, status: str) -> dict:
         "strengths": raw.get("strengths", []),
         "weaknesses": raw.get("weaknesses", []),
         "suggestions": raw.get("suggestions", []),
+        "hire_recommendation": raw.get("hire_recommendation", ""),
         "answers": raw.get("answers", []),
         "created_at": raw.get("generated_at", ""),
     }

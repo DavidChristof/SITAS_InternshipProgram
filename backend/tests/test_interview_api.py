@@ -210,6 +210,7 @@ def test_report(client, monkeypatch):
     assert data["candidate_name"] == "张三"
     assert data["total_score"] == 85.0
     assert data["level"] == "优秀"  # level "A" -> 优秀
+    assert data["hire_recommendation"] == "建议录用"
     assert isinstance(data["dimension_scores"], list)
     assert len(data["dimension_scores"]) == 5
     assert data["dimension_scores"][0]["name"] == "表达能力"
