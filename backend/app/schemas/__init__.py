@@ -119,3 +119,11 @@ class InterviewCreate(BaseModel):
 
     candidate_id: int
     job_id: int
+
+
+class AnswerCreate(BaseModel):
+    """提交一题回答请求体。"""
+
+    round_no: int
+    answer_text: str = ""
+    audio_url: str = ""
