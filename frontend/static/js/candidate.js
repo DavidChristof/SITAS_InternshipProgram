@@ -49,11 +49,16 @@ const CandidateView = {
       if (score == null) return "bg-secondary";
       return score >= 85 ? "bg-success" : score >= 70 ? "bg-primary" : "bg-warning";
     },
+    /** 兼容列表接口两种返回形态：纯数组 / {list,total} */
+    toList(r) {
+      return Array.isArray(r) ? r : ((r && r.list) || []);
+    },
     async loadJobs() {
       this.loading = true;
       this.error = "";
       try {
-        this.jobs = await Mock.get("/api/candidate/jobs", () => Mock.jobs());
+        const r = await Mock.get("/api/candidate/jobs", () => Mock.jobs());
+        this.jobs = this.toList(r);
       } catch (e) {
         this.error = e.message;
       } finally {
@@ -63,7 +68,8 @@ const CandidateView = {
     async loadHistory() {
       this.historyLoading = true;
       try {
-        this.history = await Mock.get("/api/candidate/interviews", () => Mock.interviews());
+        const r = await Mock.get("/api/candidate/interviews", () => Mock.interviews());
+        this.history = this.toList(r);
       } catch (e) {
         this.history = [];
         this.error = "加载历史记录失败：" + e.message;
