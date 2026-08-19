@@ -21,7 +21,7 @@ def test_create_and_list_enterprise(client):
     body = resp.json()
     assert body["code"] == 0
     assert body["data"]["total"] == 1
-    assert body["data"]["items"][0]["id"] == ent_id
+    assert body["data"]["list"][0]["id"] == ent_id
 
 
 def test_enterprise_update_and_delete_guard(client):
@@ -48,7 +48,7 @@ def test_create_and_list_job(client):
     body = resp.json()
     assert body["code"] == 0
     assert body["data"]["total"] == 1
-    assert body["data"]["items"][0]["enterprise_name"] == "A公司"
+    assert body["data"]["list"][0]["enterprise_name"] == "A公司"
 
 
 def test_create_job_rejects_missing_enterprise(client):
@@ -108,7 +108,7 @@ def test_resume_upload_and_candidate_flow(client, monkeypatch):
     resp = client.post("/api/candidate/resume", files=files, data={"name": "李四"})
     body = resp.json()
     assert body["code"] == 0
-    cid = body["data"]["candidate_id"]
+    cid = body["data"]["id"]
     assert cid > 0
     assert body["data"]["name"] == "李四"
     assert body["data"]["email"] == "zhang@test.com"
@@ -139,5 +139,16 @@ def test_resume_upload_updates_existing_candidate(client, monkeypatch):
     files = {"file": ("resume.txt", io.BytesIO(b"x"), "text/plain")}
     first = client.post("/api/candidate/resume", files=files, data={"email": "zhang@test.com"}).json()
     second = client.post("/api/candidate/resume", files=files, data={"name": "张三丰"}).json()
-    assert second["data"]["candidate_id"] == first["data"]["candidate_id"]
+    assert second["data"]["id"] == first["data"]["id"]
     assert second["data"]["name"] == "张三丰"
+
+
+def test_candidate_create_and_delete(client):
+    resp = client.post("/api/admin/candidates", json={"name": "王五", "email": "wang@test.com"})
+    assert resp.json()["code"] == 0
+    cid = resp.json()["data"]["id"]
+
+    assert client.get("/api/admin/candidates", params={"keyword": "王五"}).json()["data"]["total"] == 1
+
+    assert client.delete(f"/api/admin/candidates/{cid}").json()["code"] == 0
+    assert client.get("/api/admin/candidates").json()["data"]["total"] == 0

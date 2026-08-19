@@ -57,7 +57,7 @@ def _seed(client, monkeypatch) -> tuple[int, int]:
     cand = client.post(
         "/api/candidate/resume", files={"file": ("r.txt", b"x", "text/plain")}
     ).json()["data"]
-    return cand["candidate_id"], job["id"]
+    return cand["id"], job["id"]
 
 
 def _start_plan(monkeypatch, rounds: list[dict]) -> None:
@@ -82,7 +82,7 @@ def test_create_interview_and_history(client, monkeypatch):
     body = resp.json()
     assert body["code"] == 0
     assert len(body["data"]) == 1
-    assert body["data"][0]["interview_id"] == iid
+    assert body["data"][0]["id"] == iid
     assert body["data"][0]["job_title"] == "后端开发"
     assert body["data"][0]["status"] == "pending"
 

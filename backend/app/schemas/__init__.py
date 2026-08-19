@@ -67,6 +67,15 @@ class JobUpdate(BaseModel):
     skills: str | None = None
 
 
+class CandidateCreate(BaseModel):
+    """新建候选人请求体（后台手动新增）。"""
+
+    name: str = Field(min_length=1, max_length=50)
+    email: str = ""
+    phone: str = ""
+    status: str = "active"
+
+
 class CandidateUpdate(BaseModel):
     """更新候选人请求体（全部可选，仅更新非空字段）。"""
 

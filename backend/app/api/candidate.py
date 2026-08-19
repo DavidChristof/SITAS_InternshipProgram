@@ -97,10 +97,12 @@ def upload_resume(
 
     return ok(
         {
-            "candidate_id": cand.id,
+            "id": cand.id,
             "name": cand.name,
             "email": cand.email,
             "phone": cand.phone,
+            "status": cand.status,
+            "resume_text": cand.resume_text,
             "profile": profile,
         }
     )
@@ -124,13 +126,14 @@ def create_interview(body: InterviewCreate, db: Session = Depends(get_db)):
 def list_interviews(candidate_id: int = Query(...), db: Session = Depends(get_db)):
     """我的面试历史（含岗位名、状态、总分），按创建时间倒序。"""
     q = (
-        db.query(Interview, Job.title)
+        db.query(Interview, Job.title, Candidate.name)
         .join(Job, Interview.job_id == Job.id)
+        .join(Candidate, Interview.candidate_id == Candidate.id)
         .filter(Interview.candidate_id == candidate_id)
     )
     rows = q.order_by(Interview.id.desc()).all()
     items = []
-    for iv, job_title in rows:
+    for iv, job_title, candidate_name in rows:
         report: dict = {}
         if iv.report_json:
             try:
@@ -139,11 +142,12 @@ def list_interviews(candidate_id: int = Query(...), db: Session = Depends(get_db
                 report = {}
         items.append(
             {
-                "interview_id": iv.id,
+                "id": iv.id,
+                "candidate_id": iv.candidate_id,
+                "candidate_name": candidate_name,
                 "job_id": iv.job_id,
                 "job_title": job_title,
                 "status": iv.status,
-                "current_round": iv.current_round,
                 "total_score": report.get("total_score"),
                 "created_at": iv.created_at.isoformat() if iv.created_at else None,
             }

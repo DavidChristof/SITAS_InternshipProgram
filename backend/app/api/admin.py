@@ -9,7 +9,7 @@
     面试记录： GET /api/admin/interviews[/{id}]   （可筛选 candidate_id/job_id/status）
 
 分页约定：GET 列表接口支持 ?page=1&size=10（page 从 1 起，size 默认 10、上限 100），
-         返回 data = {"items": [...], "total": N, "page": 1, "size": 10}
+         返回 data = {"list": [...], "total": N, "page": 1, "size": 10}
 """
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ from ..models import (
     Question,
 )
 from ..schemas import (
+    CandidateCreate,
     CandidateUpdate,
     EnterpriseCreate,
     EnterpriseUpdate,
@@ -131,7 +132,7 @@ def list_enterprises(
         q = q.filter(Enterprise.name.contains(keyword))
     total = q.count()
     rows = q.order_by(Enterprise.id).offset((page - 1) * size).limit(size).all()
-    return ok({"items": [_enterprise_dict(e) for e in rows], "total": total, "page": page, "size": size})
+    return ok({"list": [_enterprise_dict(e) for e in rows], "total": total, "page": page, "size": size})
 
 
 @router.post("/enterprises")
@@ -204,7 +205,7 @@ def list_jobs(
         d = _job_dict(j)
         d["enterprise_name"] = ename
         items.append(d)
-    return ok({"items": items, "total": total, "page": page, "size": size})
+    return ok({"list": items, "total": total, "page": page, "size": size})
 
 
 @router.post("/jobs")
@@ -284,7 +285,7 @@ def list_candidates(
         }
         for c in rows
     ]
-    return ok({"items": items, "total": total, "page": page, "size": size})
+    return ok({"list": items, "total": total, "page": page, "size": size})
 
 
 @router.get("/candidates/{candidate_id}")
@@ -310,6 +311,29 @@ def update_candidate(candidate_id: int, body: CandidateUpdate, db: Session = Dep
     return ok(_candidate_dict(c))
 
 
+@router.post("/candidates")
+def create_candidate(body: CandidateCreate, db: Session = Depends(get_db)):
+    """新建候选人（后台手动新增）。"""
+    cand = Candidate(**body.model_dump())
+    db.add(cand)
+    db.commit()
+    db.refresh(cand)
+    return ok(_candidate_dict(cand))
+
+
+@router.delete("/candidates/{candidate_id}")
+def delete_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    """删除候选人（已有面试记录时拒绝）。"""
+    c = db.get(Candidate, candidate_id)
+    if c is None:
+        return fail(1002, "候选人不存在")
+    if db.query(Interview).filter(Interview.candidate_id == candidate_id).count():
+        return fail(1001, "该候选人已有面试记录，无法删除")
+    db.delete(c)
+    db.commit()
+    return ok({"deleted": candidate_id})
+
+
 # ============ 面试官 ============
 
 
@@ -326,7 +350,7 @@ def list_interviewers(
         q = q.filter(Interviewer.name.contains(keyword))
     total = q.count()
     rows = q.order_by(Interviewer.id).offset((page - 1) * size).limit(size).all()
-    return ok({"items": [_interviewer_dict(i) for i in rows], "total": total, "page": page, "size": size})
+    return ok({"list": [_interviewer_dict(i) for i in rows], "total": total, "page": page, "size": size})
 
 
 @router.post("/interviewers")
@@ -397,7 +421,7 @@ def list_questions(
         q = q.filter(Question.category == category)
     total = q.count()
     rows = q.order_by(Question.id).offset((page - 1) * size).limit(size).all()
-    return ok({"items": [_question_dict(q) for q in rows], "total": total, "page": page, "size": size})
+    return ok({"list": [_question_dict(q) for q in rows], "total": total, "page": page, "size": size})
 
 
 @router.post("/questions")
@@ -494,7 +518,7 @@ def list_interviews(
         }
         for iv, jtitle, cname in rows
     ]
-    return ok({"items": items, "total": total, "page": page, "size": size})
+    return ok({"list": items, "total": total, "page": page, "size": size})
 
 
 @router.get("/interviews/{interview_id}")
