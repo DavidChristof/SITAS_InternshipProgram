@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Candidate, Interview, InterviewAnswer, Job
+from ..models import Candidate, Interview, InterviewAnswer, Interviewer, Job
 from ..schemas import AnswerCreate, fail, ok
 from ..services import interview_agent, job_profiler, report as report_service
 
@@ -73,6 +73,12 @@ def start_interview(interview_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     first = plan[0]
+    # 本次面试归属的面试官（若有），供前端对话页展示"AI 面试官：张老师"
+    interviewer = None
+    if iv.interviewer_id:
+        intr = db.get(Interviewer, iv.interviewer_id)
+        if intr:
+            interviewer = {"name": intr.name, "title": intr.title}
     return ok(
         {
             "interview_id": iv.id,
@@ -80,6 +86,7 @@ def start_interview(interview_id: int, db: Session = Depends(get_db)):
             "category": first["category"],
             "question": first["question"],
             "total_rounds": len(plan),
+            "interviewer": interviewer,
         }
     )
 
@@ -177,10 +184,17 @@ def get_report(interview_id: int, db: Session = Depends(get_db)):
     if iv.status != "finished":
         return fail(1001, "面试尚未结束，无法生成报告")
 
+    # 本次面试归属的面试官（若有）
+    interviewer_name = ""
+    if iv.interviewer_id:
+        intr = db.get(Interviewer, iv.interviewer_id)
+        if intr:
+            interviewer_name = f"{intr.name}（{intr.title}）" if intr.title else intr.name
+
     # 缓存命中：直接返回已生成的报告
     if iv.report_json:
         try:
-            return ok(_adapt_report(json.loads(iv.report_json), iv.id, iv.status))
+            return ok(_adapt_report(json.loads(iv.report_json), iv.id, iv.status, interviewer_name))
         except json.JSONDecodeError:
             pass  # 缓存损坏则重新生成
 
@@ -211,16 +225,17 @@ def get_report(interview_id: int, db: Session = Depends(get_db)):
     raw = report_service.generate_report(interview_data)
     iv.report_json = json.dumps(raw, ensure_ascii=False)
     db.commit()
-    return ok(_adapt_report(raw, iv.id, iv.status))
+    return ok(_adapt_report(raw, iv.id, iv.status, interviewer_name))
 
 
-def _adapt_report(raw: dict, interview_id: int, status: str) -> dict:
+def _adapt_report(raw: dict, interview_id: int, status: str, interviewer_name: str = "") -> dict:
     """把成员A 的报告输出适配成成员C 前端契约的字段。"""
     radar = raw.get("radar_scores") or {}
     return {
         "id": interview_id,
         "job_title": raw.get("job", ""),
         "candidate_name": raw.get("candidate", ""),
+        "interviewer": interviewer_name,  # 本次面试官（张老师（副教授）），空串表示未指定
         "status": status,
         "total_score": raw.get("total_score"),
         "level": _LEVEL_CN.get(raw.get("level", ""), raw.get("level", "")),

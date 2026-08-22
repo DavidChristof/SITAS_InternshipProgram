@@ -26,6 +26,9 @@ const CandidateView = {
       historyLoading: false,
       // 正在创建面试的岗位 id
       startingId: null,
+      // 可选：本次面试官（张老师/王老师），由面试官名册加载
+      interviewers: [],
+      selectedInterviewerId: null,
     };
   },
   computed: {
@@ -37,6 +40,7 @@ const CandidateView = {
   created() {
     this.loadJobs();
     this.loadHistory();
+    this.loadInterviewers();
   },
   methods: {
     /** 面试状态 → bootstrap 徽章样式 */
@@ -52,6 +56,15 @@ const CandidateView = {
     /** 兼容列表接口两种返回形态：纯数组 / {list,total} */
     toList(r) {
       return Array.isArray(r) ? r : ((r && r.list) || []);
+    },
+    /** 加载面试官名册（供"选择本次面试官"下拉，可选） */
+    async loadInterviewers() {
+      try {
+        const r = API.unwrap(await API.get("/api/admin/interviewers?page=1&size=100"));
+        this.interviewers = Array.isArray(r) ? r : ((r && r.list) || []);
+      } catch (e) {
+        this.interviewers = [];
+      }
     },
     async loadJobs() {
       this.loading = true;
@@ -124,7 +137,11 @@ const CandidateView = {
       this.error = "";
       try {
         const resp = API.unwrap(
-          await API.post("/api/candidate/interview", { candidate_id: this.candidate.id, job_id: job.id })
+          await API.post("/api/candidate/interview", {
+            candidate_id: this.candidate.id,
+            job_id: job.id,
+            interviewer_id: this.selectedInterviewerId,
+          })
         );
         const interviewId = resp.interview_id;
         this.$emit("start-interview", { id: interviewId, jobId: job.id, jobTitle: job.title });
@@ -165,6 +182,22 @@ const CandidateView = {
 
     <!-- ===== 岗位大厅 ===== -->
     <div v-if="page === 'hall'">
+      <!-- 选择本次面试官（可选）：让面试官名册产生实际意义 -->
+      <div class="card mb-3" v-if="interviewers.length">
+        <div class="card-body py-2">
+          <div class="row align-items-center g-2">
+            <div class="col-auto text-muted small">🎓 选择本次面试官（可选）：</div>
+            <div class="col-auto">
+              <select class="form-select form-select-sm" v-model="selectedInterviewerId">
+                <option :value="null">（系统默认 AI 面试官）</option>
+                <option v-for="iv in interviewers" :key="iv.id" :value="iv.id">
+                  {{ iv.name }}<template v-if="iv.title">（{{ iv.title }}）</template>
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
       <div v-if="loading" class="text-center text-muted py-4">
         <div class="spinner-border spinner-border-sm me-2" role="status"></div>岗位加载中…
       </div>

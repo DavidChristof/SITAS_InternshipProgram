@@ -21,6 +21,7 @@ const InterviewView = {
       submitting: false,
       error: "",
       lastResult: null, // 最后一题的 {score, feedback}
+      interviewer: null, // 本次面试官 {name, title}（候选人在选岗时可指定）
       // 录音
       recording: false,
       mediaRecorder: null,
@@ -88,6 +89,7 @@ const InterviewView = {
         this.currentQuestion = q;
         this.roundNo = q.round_no || 1;
         this.totalRounds = q.total_rounds || 0;
+        this.interviewer = q.interviewer || null; // 本次面试官（若有），对话页头部展示
         this.status = "running";
         this.pushAi(this.formatQuestion(q));
       } catch (e) {
@@ -199,6 +201,10 @@ const InterviewView = {
       <button class="btn btn-outline-secondary btn-sm" @click="back()">← 返回候选人端</button>
     </div>
     <p class="text-muted small mb-3">🏢 {{ jobTitle }}</p>
+    <!-- 本次面试官（候选人在选岗时指定，来自面试官名册） -->
+    <p class="text-muted small mb-3" v-if="interviewer">
+      🎓 AI 面试官：{{ interviewer.name }}<template v-if="interviewer.title">（{{ interviewer.title }}）</template>
+    </p>
 
     <!-- 缺少面试上下文时的提示 -->
     <div v-if="!interview || !interview.id" class="card">
@@ -436,7 +442,7 @@ const ReportView = {
               <span class="text-muted ms-2 small">候选人：{{ report.candidate_name }}</span>
               <span class="text-muted ms-2 small">时间：{{ report.created_at }}</span>
             </p>
-            <p class="text-muted small mb-0">本报告由 AI 面试官根据面试表现自动生成。</p>
+            <p class="text-muted small mb-0">本报告由 AI 面试官<template v-if="report.interviewer">「{{ report.interviewer }}」</template>根据面试表现自动生成。</p>
           </div>
         </div>
       </div>

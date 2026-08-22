@@ -3,7 +3,7 @@
 接口契约（成员C依赖，请保持路径/参数不变，改动需通知C）：
     POST /api/candidate/resume             上传简历（multipart，字段 file）→ 解析并返回候选人档案
     GET  /api/candidate/jobs               可投递岗位列表（含企业名）
-    POST /api/candidate/interview          创建一场面试（body: {candidate_id, job_id}）→ 返回 interview_id
+    POST /api/candidate/interview          创建一场面试（body: {candidate_id, job_id, interviewer_id?}）→ 返回 interview_id
     GET  /api/candidate/interviews         我的面试历史（含状态、总分）
     GET  /api/candidate/interview/{id}     面试详情（逐题问答+评分+报告）（第三阶段）
 """
@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
-from ..models import Candidate, Enterprise, Interview, Job
+from ..models import Candidate, Enterprise, Interview, Interviewer, Job
 from ..schemas import InterviewCreate, fail, ok
 from ..services import resume_parser
 
@@ -115,7 +115,15 @@ def create_interview(body: InterviewCreate, db: Session = Depends(get_db)):
         return fail(1001, "候选人不存在")
     if db.get(Job, body.job_id) is None:
         return fail(1001, "岗位不存在")
-    iv = Interview(candidate_id=body.candidate_id, job_id=body.job_id, status="pending", current_round=0)
+    if body.interviewer_id is not None and db.get(Interviewer, body.interviewer_id) is None:
+        return fail(1001, "面试官不存在")
+    iv = Interview(
+        candidate_id=body.candidate_id,
+        job_id=body.job_id,
+        status="pending",
+        current_round=0,
+        interviewer_id=body.interviewer_id,
+    )
     db.add(iv)
     db.commit()
     db.refresh(iv)

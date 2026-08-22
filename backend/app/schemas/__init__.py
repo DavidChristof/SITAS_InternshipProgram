@@ -128,6 +128,7 @@ class InterviewCreate(BaseModel):
 
     candidate_id: int
     job_id: int
+    interviewer_id: int | None = None  # 可选：指定本次面试的面试官（张老师/王老师等）
 
 
 class AnswerCreate(BaseModel):

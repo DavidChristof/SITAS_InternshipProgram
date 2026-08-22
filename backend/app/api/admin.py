@@ -529,6 +529,11 @@ def get_interview(interview_id: int, db: Session = Depends(get_db)):
         return fail(1002, "面试不存在")
     job = db.get(Job, iv.job_id)
     candidate = db.get(Candidate, iv.candidate_id)
+    interviewer_name = ""
+    if iv.interviewer_id:
+        intr = db.get(Interviewer, iv.interviewer_id)
+        if intr:
+            interviewer_name = f"{intr.name}（{intr.title}）" if intr.title else intr.name
     answers = (
         db.query(InterviewAnswer)
         .filter(InterviewAnswer.interview_id == iv.id)
@@ -542,6 +547,7 @@ def get_interview(interview_id: int, db: Session = Depends(get_db)):
             "candidate_name": candidate.name if candidate else "",
             "job_id": iv.job_id,
             "job_title": job.title if job else "",
+            "interviewer_name": interviewer_name,  # 本次面试官（若有）
             "status": iv.status,
             "current_round": iv.current_round,
             "started_at": _iso(iv.started_at),
