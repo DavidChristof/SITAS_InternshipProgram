@@ -45,8 +45,12 @@ const CandidateView = {
   methods: {
     /** 面试状态 → bootstrap 徽章样式 */
     statusClass(status) {
-      const map = { pending: "bg-secondary", running: "bg-primary", finished: "bg-success" };
+      const map = { pending: "bg-secondary", running: "bg-primary", finished: "bg-success", abandoned: "bg-dark" };
       return map[status] || "bg-secondary";
+    },
+    statusText(status) {
+      const map = { pending: "待开始", running: "进行中", finished: "已完成", abandoned: "已放弃" };
+      return map[status] || status;
     },
     /** 得分 → 徽章颜色 */
     scoreBadge(score) {
@@ -154,6 +158,10 @@ const CandidateView = {
     /** 查看历史报告（仅已完成） */
     viewReport(id) {
       this.$emit("view-report", id);
+    },
+    /** 继续上次未完成的面试（待开始/进行中），interview.js 进入时按状态续接 */
+    continueInterview(h) {
+      this.$emit("start-interview", { id: h.id, jobId: h.job_id, jobTitle: h.job_title });
     },
   },
   template: `
@@ -285,7 +293,7 @@ const CandidateView = {
           <tr v-for="h in history" :key="h.id">
             <td>{{ h.id }}</td>
             <td>{{ h.job_title }}</td>
-            <td><span class="badge" :class="statusClass(h.status)">{{ h.status }}</span></td>
+            <td><span class="badge" :class="statusClass(h.status)">{{ statusText(h.status) }}</span></td>
             <td>
               <span v-if="h.total_score != null" class="badge" :class="scoreBadge(h.total_score)">{{ h.total_score }}</span>
               <span v-else class="text-muted">—</span>
@@ -293,7 +301,8 @@ const CandidateView = {
             <td>{{ h.created_at }}</td>
             <td>
               <button v-if="h.status === 'finished'" class="btn btn-sm btn-outline-primary" @click="viewReport(h.id)">查看报告</button>
-              <button v-else class="btn btn-sm btn-outline-secondary" disabled>进行中</button>
+              <button v-else-if="h.status === 'pending' || h.status === 'running'" class="btn btn-sm btn-outline-success" @click="continueInterview(h)">继续面试</button>
+              <button v-else class="btn btn-sm btn-outline-secondary" disabled>已放弃</button>
             </td>
           </tr>
         </tbody>

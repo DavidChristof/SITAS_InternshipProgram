@@ -175,6 +175,66 @@ def submit_answer(interview_id: int, body: AnswerCreate, db: Session = Depends(g
     return ok(resp)
 
 
+@router.get("/{interview_id}/state")
+def get_state(interview_id: int, db: Session = Depends(get_db)):
+    """查询面试当前状态：面试对话页进入时调用，用于中途退出后的续接。
+
+    返回 running 时带当前未答题（current_round）的题目；pending 可正常开始；
+    finished 跳报告；abandoned 提示已放弃。
+    """
+    iv = db.get(Interview, interview_id)
+    if iv is None:
+        return fail(1002, "面试不存在")
+
+    interviewer = None
+    if iv.interviewer_id:
+        intr = db.get(Interviewer, iv.interviewer_id)
+        if intr:
+            interviewer = {"name": intr.name, "title": intr.title}
+
+    total_rounds = (
+        db.query(InterviewAnswer).filter(InterviewAnswer.interview_id == iv.id).count()
+    )
+
+    # running：取当前轮未答题（题目在 start 时已落库），供前端续接
+    question = None
+    if iv.status == "running":
+        cur = (
+            db.query(InterviewAnswer)
+            .filter(
+                InterviewAnswer.interview_id == iv.id,
+                InterviewAnswer.round_no == iv.current_round,
+            )
+            .first()
+        )
+        if cur:
+            question = {"round_no": cur.round_no, "category": cur.category, "question": cur.question}
+
+    return ok(
+        {
+            "interview_id": iv.id,
+            "status": iv.status,
+            "round_no": iv.current_round or 1,
+            "question": question,
+            "total_rounds": total_rounds,
+            "interviewer": interviewer,
+        }
+    )
+
+
+@router.post("/{interview_id}/abandon")
+def abandon_interview(interview_id: int, db: Session = Depends(get_db)):
+    """放弃（作废）一场未完成的面试：pending/running → abandoned 终态。"""
+    iv = db.get(Interview, interview_id)
+    if iv is None:
+        return fail(1002, "面试不存在")
+    if iv.status not in ("pending", "running"):
+        return fail(1001, "只有未完成的面试（待开始/进行中）才能放弃")
+    iv.status = "abandoned"
+    db.commit()
+    return ok({"interview_id": iv.id, "status": iv.status})
+
+
 @router.get("/{interview_id}/report")
 def get_report(interview_id: int, db: Session = Depends(get_db)):
     """生成/获取面试报告（调用成员A 的 report.generate_report，适配前端契约）。"""

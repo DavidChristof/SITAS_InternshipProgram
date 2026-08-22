@@ -22,6 +22,7 @@ const InterviewView = {
       error: "",
       lastResult: null, // 最后一题的 {score, feedback}
       interviewer: null, // 本次面试官 {name, title}（候选人在选岗时可指定）
+      abandoning: false, // 是否正在放弃面试
       // 录音
       recording: false,
       mediaRecorder: null,
@@ -74,7 +75,7 @@ const InterviewView = {
         if (el) el.scrollTop = el.scrollHeight;
       });
     },
-    /** 开始面试：调 start 拿第一题 */
+    /** 进入面试：先查状态 → pending 正常开始 / running 续接 / finished 跳报告 / abandoned 提示已放弃 */
     async begin() {
       const id = this.interview && this.interview.id;
       if (!id) {
@@ -85,6 +86,30 @@ const InterviewView = {
       this.error = "";
       this.pushAi("面试即将开始，请认真作答。");
       try {
+        const st = API.unwrap(await API.get(`/api/interview/${id}/state`));
+        if (st.status === "running") {
+          // 中途退出后的续接：恢复当前题目与进度
+          const q = st.question;
+          this.currentQuestion = q;
+          this.roundNo = q.round_no || 1;
+          this.totalRounds = st.total_rounds || 0;
+          this.interviewer = st.interviewer || null;
+          this.status = "running";
+          this.pushAi(`欢迎回来！继续上次未完成的面试，当前是第 ${this.roundNo} 题。`);
+          this.pushAi(this.formatQuestion(q));
+          return;
+        }
+        if (st.status === "finished") {
+          this.status = "finished";
+          this.pushAi("本场面试已全部完成。");
+          return;
+        }
+        if (st.status === "abandoned") {
+          this.status = "abandoned";
+          this.pushAi("本场面试已放弃（作废），无法继续。");
+          return;
+        }
+        // pending：正常开始面试
         const q = API.unwrap(await API.post(`/api/interview/${id}/start`));
         this.currentQuestion = q;
         this.roundNo = q.round_no || 1;
@@ -95,6 +120,23 @@ const InterviewView = {
       } catch (e) {
         this.error = "面试启动失败：" + e.message;
         this.status = "idle";
+      }
+    },
+    /** 放弃（作废）本次面试：仅未完成的面试可放弃 */
+    async abandon() {
+      if (!confirm("确定放弃本次面试吗？面试记录将作废且不可恢复。")) return;
+      const id = this.interview && this.interview.id;
+      if (!id) return;
+      this.abandoning = true;
+      this.error = "";
+      try {
+        await API.post(`/api/interview/${id}/abandon`);
+        this.status = "abandoned";
+        this.pushAi("你已放弃本次面试，面试记录已作废。");
+      } catch (e) {
+        this.error = "放弃失败：" + e.message;
+      } finally {
+        this.abandoning = false;
       }
     },
     /** 提交一题回答：展示评分反馈，有下一题则继续 */
@@ -256,6 +298,12 @@ const InterviewView = {
           </button>
         </div>
         <p class="text-muted small mt-1">提示：可输入文字或点击「语音」按钮录制回答。</p>
+        <div class="mt-2 text-end">
+          <button class="btn btn-outline-danger btn-sm" @click="abandon()"
+                  :disabled="abandoning || submitting || transcribing">
+            {{ abandoning ? '处理中…' : '🚫 放弃本次面试（作废）' }}
+          </button>
+        </div>
       </div>
 
       <!-- 面试结束 -->
@@ -269,6 +317,17 @@ const InterviewView = {
             </p>
             <p class="text-muted small mb-3">完整报告（总分 / 维度分析 / 优缺点 / 建议）将在结果页展示</p>
             <button class="btn btn-success btn-lg" @click="viewReport()">📊 查看结果报告 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 面试已放弃（作废） -->
+      <div v-if="status === 'abandoned'" class="mt-3">
+        <div class="card border-danger">
+          <div class="card-body text-center">
+            <h5 class="text-danger">🚫 面试已放弃（作废）</h5>
+            <p class="text-muted small mb-3">本场面试记录已作废，无法继续作答或查看报告。</p>
+            <button class="btn btn-outline-secondary" @click="back()">← 返回候选人端</button>
           </div>
         </div>
       </div>

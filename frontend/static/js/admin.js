@@ -134,7 +134,7 @@ const AdminView = {
         },
         interview: {
           label: "面试记录", endpoint: "/api/admin/interviews", built: true, readonly: true,
-          format: { status: { pending: "待开始", running: "进行中", finished: "已完成" } },
+          format: { status: { pending: "待开始", running: "进行中", finished: "已完成", abandoned: "已放弃" } },
           columns: [
             { key: "id", label: "ID" }, { key: "candidate_name", label: "候选人" },
             { key: "job_title", label: "岗位" }, { key: "status", label: "状态" },
@@ -147,6 +147,7 @@ const AdminView = {
               options: () => [
                 { value: "", label: "全部状态" }, { value: "pending", label: "待开始" },
                 { value: "running", label: "进行中" }, { value: "finished", label: "已完成" },
+                { value: "abandoned", label: "已放弃" },
               ],
             },
             {
