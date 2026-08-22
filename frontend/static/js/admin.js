@@ -372,6 +372,8 @@ const AdminView = {
         }
         this._closeModal();
         await this.load(tab, this.pages[tab]);
+        // 刷新表单下拉引用（新增/编辑企业后，岗位表单「所属企业」下拉才能看到新企业）
+        await this.loadReference();
       } catch (e) {
         this.error = "保存失败：" + e.message;
       } finally {
@@ -385,6 +387,7 @@ const AdminView = {
       try {
         await API.del(`${this.cur.endpoint}/${row.id}`);
         await this.load(tab, this.pages[tab]);
+        await this.loadReference(); // 删除后同步刷新下拉引用，保持一致
       } catch (e) {
         this.error = "删除失败：" + e.message;
       }
