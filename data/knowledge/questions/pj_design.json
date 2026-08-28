@@ -1,0 +1,9 @@
+{
+  "title": "项目：架构设计取舍",
+  "content": "在项目设计时，你做过哪些技术选型或架构上的取舍？为什么这样选？",
+  "meta": {
+    "category": "project",
+    "expected_points": "选型有依据,对比多个方案,考虑成本与演进,反思取舍",
+    "difficulty": 3
+  }
+}

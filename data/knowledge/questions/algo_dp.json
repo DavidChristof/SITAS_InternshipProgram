@@ -1,0 +1,9 @@
+{
+  "title": "专业：动态规划思想",
+  "content": "请用动态规划解决一个你熟悉的题目（如背包、爬楼梯、最长公共子序列），并说明思路。",
+  "meta": {
+    "category": "technical",
+    "expected_points": "状态定义,转移方程,边界条件,复杂度优化",
+    "difficulty": 3
+  }
+}

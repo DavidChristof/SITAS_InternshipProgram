@@ -1,0 +1,13 @@
+{
+  "title": "测试开发工程师岗位JD",
+  "content": "岗位职责：负责产品的自动化测试体系建设，包括接口测试、UI 自动化、性能与稳定性测试，编写测试用例并推动质量闭环。任职要求：计算机相关专业本科及以上；熟悉 Python 或 Java；了解 pytest/TestNG、Selenium 等测试框架；具备接口测试（Postman/requests）经验；了解 CI/CD 流水线优先。加分项：有自动化测试平台建设经验、了解 JIRA/禅道等缺陷管理工具。",
+  "meta": {
+    "category": "job",
+    "skills": [
+      "Python",
+      "自动化测试",
+      "pytest",
+      "CI/CD"
+    ]
+  }
+}

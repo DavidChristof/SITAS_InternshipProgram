@@ -1,0 +1,9 @@
+{
+  "title": "专业：Python 协程与 async/await",
+  "content": "请解释 Python 的协程与 async/await 机制，以及它和线程相比的优缺点。",
+  "meta": {
+    "category": "technical",
+    "expected_points": "协程原理,事件循环,与线程对比,适用场景",
+    "difficulty": 3
+  }
+}

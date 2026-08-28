@@ -1,0 +1,9 @@
+{
+  "title": "专业：常见排序算法",
+  "content": "快排、归并、堆排序的时间复杂度和稳定性如何？什么场景下你会优先选哪种？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "复杂度分析,稳定性,适用场景,手写能力",
+    "difficulty": 2
+  }
+}

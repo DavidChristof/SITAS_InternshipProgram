@@ -1,0 +1,9 @@
+{
+  "title": "专业：微调 vs RAG",
+  "content": "在接入大模型的场景里，什么时候选择微调（Fine-tuning），什么时候选择 RAG？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "两者原理,知识更新,成本对比,适用场景,幻觉控制",
+    "difficulty": 3
+  }
+}

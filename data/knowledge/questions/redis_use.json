@@ -1,0 +1,9 @@
+{
+  "title": "专业：Redis 缓存穿透/击穿/雪崩",
+  "content": "请解释缓存穿透、缓存击穿和缓存雪崩分别是什么？如何解决？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "三个概念区分,各自成因,解决方案,实战经验",
+    "difficulty": 3
+  }
+}

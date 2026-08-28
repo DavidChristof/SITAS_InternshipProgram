@@ -1,0 +1,9 @@
+{
+  "title": "专业：A/B 测试与指标体系",
+  "content": "如何设计一个 A/B 测试？核心指标与样本量、显著性怎么考虑？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "实验设计,核心指标,样本量,显著性,实验周期",
+    "difficulty": 3
+  }
+}

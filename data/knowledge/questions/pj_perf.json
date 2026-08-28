@@ -1,0 +1,9 @@
+{
+  "title": "项目：性能优化过程",
+  "content": "请详细讲一次你做过的性能优化：从发现问题到定位瓶颈再到最终效果。",
+  "meta": {
+    "category": "project",
+    "expected_points": "有量化指标,定位方法科学,优化手段合理,效果可验证",
+    "difficulty": 3
+  }
+}

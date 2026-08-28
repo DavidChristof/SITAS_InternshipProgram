@@ -1,0 +1,9 @@
+{
+  "title": "专业：Spring Boot 自动装配",
+  "content": "请解释 Spring Boot 的自动装配（Auto Configuration）原理，以及依赖注入的优势。",
+  "meta": {
+    "category": "technical",
+    "expected_points": "自动装配原理,条件注解,依赖注入,控制反转",
+    "difficulty": 3
+  }
+}

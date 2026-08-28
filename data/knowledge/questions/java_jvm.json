@@ -1,0 +1,9 @@
+{
+  "title": "专业：JVM 内存模型与 GC",
+  "content": "JVM 运行时内存区域如何划分？常见的垃圾回收算法有哪些？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "堆栈方法区,GC算法,新生代老年代,调优思路",
+    "difficulty": 3
+  }
+}

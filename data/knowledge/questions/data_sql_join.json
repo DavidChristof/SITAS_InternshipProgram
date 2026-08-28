@@ -1,0 +1,9 @@
+{
+  "title": "专业：SQL 多表查询与 JOIN",
+  "content": "SQL 中 INNER JOIN、LEFT JOIN 的区别是什么？如何优化多表关联查询？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "JOIN类型区别,驱动表,索引优化,执行计划",
+    "difficulty": 2
+  }
+}

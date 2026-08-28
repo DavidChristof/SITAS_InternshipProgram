@@ -1,0 +1,9 @@
+{
+  "title": "专业：数据库索引原理",
+  "content": "数据库索引为什么能加速查询？B+ 树索引的底层原理是什么？哪些情况下索引会失效？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "索引原理,B+树结构,失效场景,覆盖索引",
+    "difficulty": 3
+  }
+}

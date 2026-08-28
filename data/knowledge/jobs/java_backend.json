@@ -1,0 +1,13 @@
+{
+  "title": "Java 后端开发工程师岗位JD",
+  "content": "岗位职责：负责公司核心业务系统的后端服务设计与开发，包括 REST API 开发、数据库建模、微服务拆分、中间件（Redis/MQ）接入与性能优化。任职要求：计算机相关专业本科及以上；熟练掌握 Java，熟悉 Spring Boot/Spring Cloud；掌握 MySQL 与索引优化；了解 Redis 缓存与消息队列；有分布式或高并发经验者优先。加分项：了解微服务治理、Docker/K8s、有实习或项目经验。",
+  "meta": {
+    "category": "job",
+    "skills": [
+      "Java",
+      "Spring Boot",
+      "MySQL",
+      "Redis"
+    ]
+  }
+}

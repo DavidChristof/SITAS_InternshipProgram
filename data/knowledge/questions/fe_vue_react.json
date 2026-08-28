@@ -1,0 +1,9 @@
+{
+  "title": "专业：Vue 与 React 对比",
+  "content": "Vue 与 React 在响应式原理和渲染机制上有什么主要区别？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "响应式原理,虚拟DOM,组件通信,各自适用场景",
+    "difficulty": 2
+  }
+}

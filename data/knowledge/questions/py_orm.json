@@ -1,0 +1,9 @@
+{
+  "title": "专业：ORM 与原生 SQL",
+  "content": "用 ORM（如 SQLAlchemy）和原生 SQL 各有什么优缺点？你会在什么场景下选择哪一种？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "ORM优点,原生SQL优点,性能对比,场景取舍",
+    "difficulty": 2
+  }
+}

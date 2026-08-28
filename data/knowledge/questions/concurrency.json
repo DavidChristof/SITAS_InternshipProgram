@@ -1,0 +1,9 @@
+{
+  "title": "专业：高并发限流与熔断",
+  "content": "在接口层如何做限流、熔断和降级？常见的算法有哪些？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "令牌桶,漏桶,计数器,熔断概念,降级策略",
+    "difficulty": 3
+  }
+}

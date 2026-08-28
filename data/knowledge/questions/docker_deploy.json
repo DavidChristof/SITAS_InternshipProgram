@@ -1,0 +1,9 @@
+{
+  "title": "专业：Docker 部署",
+  "content": "Docker 部署应用相比传统部署有什么优势？你如何编写 Dockerfile 或做容器化？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "镜像分层,环境一致,隔离性,构建优化",
+    "difficulty": 2
+  }
+}

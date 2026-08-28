@@ -1,0 +1,9 @@
+{
+  "title": "项目：最难排查的 Bug",
+  "content": "请讲一个你遇到过的最难排查的 Bug 或线上故障，你是如何定位和解决的？",
+  "meta": {
+    "category": "project",
+    "expected_points": "问题描述清晰,定位过程有方法,解决方案完整,有量化影响",
+    "difficulty": 3
+  }
+}

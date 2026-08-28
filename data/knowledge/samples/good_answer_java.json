@@ -1,0 +1,8 @@
+{
+  "title": "优秀回答样例：Spring Boot 自动装配",
+  "content": "优秀回答示范：'Spring Boot 的自动装配基于 @EnableAutoConfiguration，启动时通过 spring.factories 里的自动配置类，配合 @ConditionalOnClass 等条件注解，按依赖情况自动装配 Bean，所以只需要引入 starter 就能开箱即用。依赖注入（DI）实现控制反转，让对象由容器管理，降低耦合、便于测试。我的理解是：自动装配省掉了大量 XML 配置，让团队聚焦业务；但出现问题时也要会看自动配置的源码定位。' 评分要点：自动装配原理正确（40%）、能讲条件注解（20%）、DI/IoC 概念清楚（30%）、有工程体会（10%）。",
+  "meta": {
+    "category": "sample",
+    "for_category": "technical"
+  }
+}

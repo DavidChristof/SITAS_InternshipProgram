@@ -1,0 +1,9 @@
+{
+  "title": "专业：接口鉴权方案",
+  "content": "JWT 和 Session 两种登录鉴权方案的区别是什么？各自适用什么场景？",
+  "meta": {
+    "category": "technical",
+    "expected_points": "JWT结构,无状态,Session服务端存储,安全性与场景",
+    "difficulty": 2
+  }
+}
