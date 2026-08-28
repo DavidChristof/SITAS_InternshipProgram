@@ -220,8 +220,8 @@ const InterviewView = {
         const fd = new FormData();
         fd.append("file", blob, `answer_${this.roundNo}.webm`);
         fd.append("round_no", String(this.roundNo));
-        // 语音转写接口已推迟（联调 #5），暂保留 Mock 演示；就绪后改为 API.upload(`/api/interview/${id}/audio`, fd)
-        const r = await Mock.upload(`/api/interview/${id}/audio`, fd, () => Mock.transcribeAudio(fd));
+        // 语音转写：上传到后端本地 faster-whisper 转写（联调 #5 已实现；转写失败后端返回空文本）
+        const r = API.unwrap(await API.upload(`/api/interview/${id}/audio`, fd));
         const text = (r && r.text) || "";
         if (text) {
           this.answerText = text;

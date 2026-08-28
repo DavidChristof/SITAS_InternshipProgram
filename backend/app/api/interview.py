@@ -9,15 +9,18 @@
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import get_db
 from ..models import Candidate, Interview, InterviewAnswer, Interviewer, Job
 from ..schemas import AnswerCreate, fail, ok
-from ..services import interview_agent, job_profiler, report as report_service
+from ..services import interview_agent, job_profiler, report as report_service, voice
 
 router = APIRouter(prefix="/api/interview", tags=["面试流程"])
 
@@ -233,6 +236,30 @@ def abandon_interview(interview_id: int, db: Session = Depends(get_db)):
     iv.status = "abandoned"
     db.commit()
     return ok({"interview_id": iv.id, "status": iv.status})
+
+
+@router.post("/{interview_id}/audio")
+def upload_audio(
+    interview_id: int,
+    file: UploadFile = File(...),
+    round_no: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """上传语音回答 → 本地 faster-whisper 转写为文字（联调 #5）。
+
+    转写失败（未装 faster-whisper / 模型不可用 / 识别为空）时返回空文本，
+    前端提示改用文字回答；绝不抛异常，不影响文字面试闭环。
+    """
+    iv = db.get(Interview, interview_id)
+    if iv is None:
+        return fail(1002, "面试不存在")
+    content = file.file.read()
+    suffix = Path(file.filename or "answer.webm").suffix or ".webm"
+    dest = Path(settings.upload_dir) / f"audio_{uuid.uuid4().hex}{suffix}"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(content)
+    text = voice.transcribe(dest)  # 降级优先：任何失败返回空串
+    return ok({"text": text, "round_no": round_no, "audio_url": dest.name})
 
 
 @router.get("/{interview_id}/report")
